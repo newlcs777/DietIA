@@ -1,7 +1,12 @@
 import axios from "axios";
 
-// 🌐 Define a URL base do backend hospedado no Render
-const API_BASE_URL = "https://dietia-backend.onrender.com";
+// 🌍 Detecta o ambiente automaticamente (local ou hospedado)
+const isLocalhost = window.location.hostname === "localhost";
+
+// 🔹 Se estiver local, usa o backend da máquina. Caso contrário, usa o Render.
+const API_BASE_URL = isLocalhost
+  ? "http://localhost:3001"
+  : "https://dietia-backend.onrender.com"; // 🔧 substitua por seu link do Render se for diferente
 
 export const gerarDieta = async (dadosUsuario) => {
   try {
@@ -53,14 +58,13 @@ Meta diária estimada: ${dadosUsuario.tmbResult || "Não informado"} kcal
 Recomendações: manter hidratação e evitar frituras.
 `;
 
-    // 🔹 Envia o prompt para o backend no Render
+    // 🧠 Envia o prompt para o backend (Render ou localhost)
     const response = await axios.post(`${API_BASE_URL}/api/gerarDieta`, { prompt });
 
-    return response.data.dieta || "❌ Erro: resposta vazia.";
+    // ✅ Retorna a resposta do backend corretamente
+    return response.data?.dieta || response.data || "❌ Erro: resposta vazia.";
   } catch (error) {
     console.error("❌ Erro ao gerar dieta (frontend):", error);
-    throw new Error(
-      "Erro ao gerar dieta com Gemini. Verifique o log do servidor."
-    );
+    throw new Error("Erro ao gerar dieta com Gemini. Verifique o log do servidor.");
   }
 };
