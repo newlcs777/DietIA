@@ -6,7 +6,7 @@ const isLocalhost = window.location.hostname === "localhost";
 // 🔹 Se estiver local, usa o backend da máquina. Caso contrário, usa o Render.
 const API_BASE_URL = isLocalhost
   ? "http://localhost:3001"
-  : "https://dietia-backend.onrender.com"; // 🔧 substitua por seu link do Render se for diferente
+  : "https://dietia-backend-vq8o.onrender.com"; // ✅ link correto do Render
 
 export const gerarDieta = async (dadosUsuario) => {
   try {
