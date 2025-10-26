@@ -1,5 +1,8 @@
 import axios from "axios";
 
+// 🌐 Define a URL base do backend hospedado no Render
+const API_BASE_URL = "https://dietia-backend.onrender.com";
+
 export const gerarDieta = async (dadosUsuario) => {
   try {
     const prompt = `
@@ -29,8 +32,6 @@ Você é um nutricionista profissional e deve montar um plano alimentar **person
 4. Após as refeições, repita um pequeno resumo do objetivo e recomendações finais em poucas linhas.
 5. Não coloque texto de alerta nem justificativas — apenas o plano e o resumo final.
 
-Exemplo de formato:
-
 📋 **Informações do Usuário**
 (Repita os dados principais)
 
@@ -52,7 +53,9 @@ Meta diária estimada: ${dadosUsuario.tmbResult || "Não informado"} kcal
 Recomendações: manter hidratação e evitar frituras.
 `;
 
-    const response = await axios.post("/api/gerarDieta", { prompt });
+    // 🔹 Envia o prompt para o backend no Render
+    const response = await axios.post(`${API_BASE_URL}/api/gerarDieta`, { prompt });
+
     return response.data.dieta || "❌ Erro: resposta vazia.";
   } catch (error) {
     console.error("❌ Erro ao gerar dieta (frontend):", error);
