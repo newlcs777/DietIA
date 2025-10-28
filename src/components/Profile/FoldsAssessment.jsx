@@ -40,12 +40,11 @@ export default function FoldsAssessment() {
   const [loading, setLoading] = useState(true);
   const [mensagem, setMensagem] = useState("");
 
-  // 🔹 Carregar dados anteriores de avaliação (se existirem)
+  // 🔹 Carregar dados anteriores
   useEffect(() => {
     const carregarDados = async () => {
       const user = auth.currentUser;
       if (!user) return;
-
       try {
         const ref = doc(db, "physicalAssessments", user.uid);
         const snap = await getDoc(ref);
@@ -66,7 +65,6 @@ export default function FoldsAssessment() {
         setLoading(false);
       }
     };
-
     carregarDados();
   }, []);
 
@@ -89,7 +87,6 @@ export default function FoldsAssessment() {
     }
   }, [subescapular, triciptal, axiliar, supra, peitoral, abdominal, coxa, age]);
 
-  // 🚀 Salvar avaliação e redirecionar com dados completos
   const handleSubmit = async () => {
     const user = auth.currentUser;
     if (!user) {
@@ -98,12 +95,10 @@ export default function FoldsAssessment() {
     }
 
     try {
-      // 🔸 1. Buscar dados da TMB salvos no Firestore
       const tmbRef = doc(db, "users", user.uid);
       const tmbSnap = await getDoc(tmbRef);
       const tmbData = tmbSnap.exists() ? tmbSnap.data() : {};
 
-      // 🔸 2. Salvar a avaliação física no Firestore
       const ref = doc(db, "physicalAssessments", user.uid);
       const safe = (v) => (v !== undefined ? v : 0);
 
@@ -131,7 +126,6 @@ export default function FoldsAssessment() {
 
       setMensagem("✅ Avaliação física salva com sucesso!");
 
-      // 🔸 3. Combinar dados de TMB + Avaliação Física
       const dadosCompletos = {
         ...tmbData,
         height: height || tmbData.height || 0,
@@ -144,26 +138,22 @@ export default function FoldsAssessment() {
         protein: tmbData.protein || 0,
         carb: tmbData.carb || 0,
         fat: tmbData.fat || 0,
-        activityLevel: tmbData.activityLevel || "",
-        restrictions: tmbData.restrictions || "",
-        trainingType: tmbData.trainingType || "",
-        supplements: tmbData.supplements || "",
-        foods: tmbData.foods || "",
         resultado,
         percentualGordura,
       };
 
-      // 🔸 4. Salvar no localStorage
       localStorage.setItem("dadosUsuario", JSON.stringify(dadosCompletos));
-
-      // 🔸 5. Redirecionar para a página de resultado
-      navigate("/dashboard/resultado", {
-        state: dadosCompletos,
-      });
+      navigate("/dashboard/resultado", { state: dadosCompletos });
     } catch (error) {
       console.error("Erro ao salvar avaliação física:", error);
       setMensagem("❌ Erro ao salvar os dados.");
     }
+  };
+
+  const handleInput = (setter) => (e) => {
+    const value = parseFloat(e.target.value);
+    if (value > 100) return; // ⛔ Limite máximo de 100
+    setter(isNaN(value) ? 0 : value);
   };
 
   const measurements = [
@@ -189,17 +179,34 @@ export default function FoldsAssessment() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-10 px-4"
+      className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 px-4 sm:px-6 lg:px-8"
     >
-      <div className="max-w-3xl mx-auto space-y-10 font-sans text-gray-800">
-        <PhysicalAssessmentInfo />
+      <div className="max-w-5xl mx-auto space-y-8 font-sans text-gray-800">
 
-        <section className="bg-white/95 backdrop-blur-md p-8 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.1)] transition-all duration-300">
-          <h2 className="text-2xl sm:text-3xl font-bold text-[#F5BA45] text-center mb-8">
+        {/* 🟡 Tabela de Resultados no Topo */}
+        <div className="bg-yellow-50 border border-yellow-100 p-6 rounded-3xl shadow-inner text-center space-y-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-[#F5BA45]">
+            Resultado Atual da Avaliação Física
+          </h2>
+          <p className="text-gray-700">
+            Soma das dobras:{" "}
+            <span className="font-bold text-gray-900">{resultado} mm</span>
+          </p>
+          <p className="text-gray-700">
+            Percentual de gordura estimado:{" "}
+            <span className="font-bold text-[#F5BA45]">
+              {percentualGordura.toFixed(2)}%
+            </span>
+          </p>
+        </div>
+
+        {/* 🔹 Formulário principal */}
+        <section className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100 space-y-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-[#F5BA45] text-center">
             Avaliação Física — 7 Dobras de Jackson & Pollock
           </h2>
 
-          <div className="grid sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-gray-700 font-medium mb-1">
                 Idade:
@@ -207,9 +214,11 @@ export default function FoldsAssessment() {
               <input
                 type="number"
                 value={age}
-                onChange={(e) => setAge(parseFloat(e.target.value))}
-                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#F5BA45] outline-none transition"
-                placeholder="Digite sua idade"
+                onChange={handleInput(setAge)}
+                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#F5BA45]"
+                placeholder="Digite sua idade (máx 100)"
+                min="10"
+                max="100"
               />
             </div>
 
@@ -221,35 +230,21 @@ export default function FoldsAssessment() {
                 <input
                   type="number"
                   value={value}
-                  onChange={(e) => setValue(parseFloat(e.target.value))}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#F5BA45] outline-none transition"
-                  placeholder={`Digite a medida (${label})`}
+                  onChange={handleInput(setValue)}
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#F5BA45]"
+                  placeholder={`Medida (${label}) — máx 100`}
+                  min="1"
+                  max="100"
                 />
               </div>
             ))}
-          </div>
-
-          <div className="mt-8 bg-yellow-50 border border-yellow-100 p-6 rounded-2xl shadow-inner text-center space-y-2">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Resultados:
-            </h3>
-            <p className="text-gray-700">
-              Soma das dobras:{" "}
-              <span className="font-bold text-gray-900">{resultado} mm</span>
-            </p>
-            <p className="text-gray-700">
-              Percentual de gordura:{" "}
-              <span className="font-bold text-[#F5BA45]">
-                {percentualGordura.toFixed(2)}%
-              </span>
-            </p>
           </div>
 
           {mensagem && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className={`text-center mt-4 font-medium ${
+              className={`text-center font-medium ${
                 mensagem.includes("sucesso")
                   ? "text-green-600"
                   : "text-red-600"
@@ -262,11 +257,16 @@ export default function FoldsAssessment() {
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={handleSubmit}
-            className="w-full mt-6 bg-[#F5BA45] hover:bg-[#e4a834] text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg"
+            className="w-full mt-4 bg-[#F5BA45] hover:bg-[#e4a834] text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg"
           >
             Salvar Avaliação e Ver Resultado
           </motion.button>
         </section>
+
+        {/* 🔸 Informações adicionais no final */}
+        <div className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100">
+          <PhysicalAssessmentInfo />
+        </div>
       </div>
     </motion.div>
   );

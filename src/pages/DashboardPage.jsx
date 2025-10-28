@@ -74,7 +74,7 @@ export default function DashboardPage() {
               { path: "/dashboard/profile", label: "🏠 Dashboard" },
               { path: "/dashboard/avaliacao", label: "💪 Avaliação Física" },
               { path: "/dashboard/resultado", label: "📈 Resultado" },
-              { path: "/dashboard/dieta", label: "🍽️ Dieta IA" },
+              { path: "/dashboard/dieta", label: "🍽️ Dieta " },
 
               { path: "/dashboard/config", label: "⚙️ Configurações" },
             ].map(({ path, label }) => (

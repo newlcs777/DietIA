@@ -1,70 +1,77 @@
 import axios from "axios";
 
-// 🌍 Detecta o ambiente automaticamente (local ou hospedado)
+// 🌍 Detecta o ambiente (local ou hospedado)
 const isLocalhost = window.location.hostname === "localhost";
 
-// 🔹 Se estiver local, usa o backend da máquina. Caso contrário, usa o Render.
+// 🔹 Define o link certo do backend
 const API_BASE_URL = isLocalhost
   ? "http://localhost:3001"
-  : "https://dietia-backend-vq8o.onrender.com"; // ✅ link correto do Render
+  : "https://dietia-backend-vq8o.onrender.com"; // ⚠️ Use exatamente esse link com o -vq8o
 
 export const gerarDieta = async (dadosUsuario) => {
   try {
     const prompt = `
-Você é um nutricionista profissional e deve montar um plano alimentar **personalizado e direto** com base nas informações abaixo:
+Você é um nutricionista profissional. Gere um plano alimentar prático e direto com base nas informações abaixo.
 
-📋 **Dados do Usuário**
-- Altura: ${dadosUsuario.height} cm
-- Peso: ${dadosUsuario.weight} kg
-- Idade: ${dadosUsuario.age} anos
-- Sexo: ${dadosUsuario.sex}
-- Percentual de gordura: ${dadosUsuario.percentualGordura || "Não informado"}
-- TMB (Taxa Metabólica Basal): ${dadosUsuario.tmbResult || "Não informado"} kcal
-- Objetivo: ${dadosUsuario.goal}
-- Nível de atividade: ${dadosUsuario.activityLevel}
-- Refeições por dia: ${dadosUsuario.meals}
-- Restrições alimentares: ${dadosUsuario.restrictions || "Nenhuma"}
-- Tipo de treino: ${dadosUsuario.trainingType || "Não informado"}
-- Suplementos: ${dadosUsuario.supplements || "Nenhum"}
-- Alimentos preferidos: ${dadosUsuario.foods || "Não informado"}
+Inclua apenas:
+- O título do plano (exemplo: Plano Alimentar para Emagrecimento)
+- As informações básicas do cliente (altura, peso, idade, sexo, objetivo, nível de atividade, refeições por dia, restrições, treino, alimentos preferidos)
+- O plano alimentar diário, dividido claramente em blocos nomeados:
+  Café da manhã
+  Lanche da manhã
+  Almoço
+  Lanche da tarde
+  Jantar
+  Ceia
 
-🍽️ **Monte a dieta de forma simples, objetiva e estruturada**, respeitando os dados acima.
+Regras importantes:
+1. Liste cada refeição em um bloco separado, com nome da refeição e os alimentos correspondentes.
+2. Todas as quantidades devem estar em gramas (g), mililitros (ml) ou unidades.
+3. Não escreva observações, recomendações, metas, considerações, notas, lembretes, variações ou mensagens extras.
+4. Não use asteriscos (*), hashtags (#), emojis, negritos, itálicos, traços ou qualquer caractere especial.
+5. Retorne apenas texto limpo, com uma linha em branco entre cada refeição.
+6. Escreva de forma organizada, com boa legibilidade e espaçamento.
+7.coloque a quantidade de agua de acordo com o peso 35ml por kilo
 
-### Instruções importantes:
-1. A dieta deve conter **todas as refeições** do dia, de acordo com o número informado (${dadosUsuario.meals} refeições, se aplicável).
-2. Liste **somente os alimentos e quantidades (em gramas ou unidades)**, sem explicações longas.
-3. Inclua **as refeições nomeadas** (Café da Manhã, Lanche da Manhã, Almoço, Lanche da Tarde, Jantar, Ceia, etc.).
-4. Após as refeições, repita um pequeno resumo do objetivo e recomendações finais em poucas linhas.
-5. Não coloque texto de alerta nem justificativas — apenas o plano e o resumo final.
-
-📋 **Informações do Usuário**
-(Repita os dados principais)
-
-🍽️ **Plano Alimentar**
-Café da Manhã:
-- Aveia 50g
-- Leite desnatado 200ml
-- Banana 1 unidade
-
-Almoço:
-- Arroz integral 100g
-- Feijão 80g
-- Frango grelhado 150g
-- Salada verde 100g
-
-Resumo Final:
+Dados do cliente:
+Altura: ${dadosUsuario.height} cm
+Peso: ${dadosUsuario.weight} kg
+Idade: ${dadosUsuario.age} anos
+Sexo: ${dadosUsuario.sex}
 Objetivo: ${dadosUsuario.goal}
-Meta diária estimada: ${dadosUsuario.tmbResult || "Não informado"} kcal
-Recomendações: manter hidratação e evitar frituras.
+Atividade: ${dadosUsuario.activityLevel}
+Refeições por dia: ${dadosUsuario.meals}
+Restrições: ${dadosUsuario.restrictions || "Nenhuma"}
+Treino: ${dadosUsuario.trainingType || "Não informado"}
+Alimentos preferidos: ${dadosUsuario.foods || "Não informado"}
 `;
 
-    // 🧠 Envia o prompt para o backend (Render ou localhost)
+    // 🚀 Envia o prompt para o backend (Render)
     const response = await axios.post(`${API_BASE_URL}/api/gerarDieta`, { prompt });
 
-    // ✅ Retorna a resposta do backend corretamente
-    return response.data?.dieta || response.data || "❌ Erro: resposta vazia.";
+    // 🔹 Pega o texto retornado (ou vazio)
+    const textoBruto = response.data?.dieta || "";
+
+    // 🔹 Limpeza geral de formatações e caracteres
+    const textoLimpo = textoBruto
+      .replace(/[*#_`~>•\-]/g, "") // remove caracteres especiais
+      .replace(/\r?\n\s*\r?\n\s*\r?\n/g, "\n\n") // remove múltiplas quebras
+      .replace(/\s{2,}/g, " ") // remove espaços duplicados
+      .trim();
+
+    // 🔹 Divide as refeições em blocos
+    const blocos = textoLimpo
+      .split(/(?=Café da manhã|Lanche da manhã|Almoço|Lanche da tarde|Jantar|Ceia)/i)
+      .map((b) => b.trim())
+      .filter((b) => b.length > 0);
+
+    // 🔹 Adiciona separadores visuais
+    const dietaFormatada = blocos.join("\n\n----------------------------\n\n");
+
+    // 🔹 Retorna dieta limpa e organizada
+    return dietaFormatada || "Nenhuma resposta recebida do servidor.";
   } catch (error) {
     console.error("❌ Erro ao gerar dieta (frontend):", error);
-    throw new Error("Erro ao gerar dieta com Gemini. Verifique o log do servidor.");
+    throw new Error("Erro ao gerar dieta. Tente novamente mais tarde.");
   }
 };

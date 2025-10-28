@@ -8,10 +8,8 @@ export default function ResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 🔹 Busca dados do localStorage (se existirem)
   const savedData = JSON.parse(localStorage.getItem("dadosUsuario")) || {};
 
-  // 🔹 Usa dados vindos da navegação (location.state) ou do localStorage
   const initialState = location.state || savedData || {
     height: 0,
     weight: 0,
@@ -44,27 +42,27 @@ export default function ResultPage() {
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
-  // 🧠 Sempre que algo mudar, salva tudo no localStorage
   useEffect(() => {
     const dadosCompletos = { ...initialState, ...editableFields };
     localStorage.setItem("dadosUsuario", JSON.stringify(dadosCompletos));
   }, [editableFields, initialState]);
 
-  // 🔹 Atualiza campos editáveis
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "meals" && Number(value) > 8) return; // Limite máximo de 8 refeições
+
     setEditableFields((prev) => ({
       ...prev,
-      [name]: value === "" ? "" : isNaN(value) ? value : Number(value),
+      [name]: value,
     }));
   };
 
-  // 🚀 Gera a dieta via API, salva e redireciona
   const handleGenerateDiet = async () => {
     if (loading) return;
     setLoading(true);
     setError("");
-    setStatusMessage("⏳ Gerando dieta... isso pode levar alguns segundos.");
+    setStatusMessage("⏳ Gerando dieta personalizada...");
 
     try {
       const diet = await gerarDieta({ ...initialState, ...editableFields });
@@ -73,14 +71,10 @@ export default function ResultPage() {
           ? diet
           : diet?.[0]?.generated_text || JSON.stringify(diet, null, 2);
 
-      // 🔹 Salva no localStorage
       localStorage.setItem("dietaGerada", textoPlano);
-
-      // 🔹 Salva também os dados mais recentes
       const dadosCompletos = { ...initialState, ...editableFields };
       localStorage.setItem("dadosUsuario", JSON.stringify(dadosCompletos));
 
-      // 🔹 Redireciona para página Dieta IA
       setStatusMessage("✅ Dieta gerada com sucesso!");
       navigate("/dashboard/dieta");
     } catch (err) {
@@ -102,7 +96,7 @@ export default function ResultPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fffdfa] via-gray-50 to-gray-100 font-sans text-gray-800 py-10 px-4 sm:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#fffdfa] via-gray-50 to-gray-100 font-sans text-gray-800 py-8 px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -115,13 +109,13 @@ export default function ResultPage() {
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, delay: 0.1 }}
-        className="max-w-3xl mx-auto mt-10 bg-white rounded-3xl shadow-lg border border-gray-100 p-6 sm:p-10 space-y-8"
+        className="max-w-5xl mx-auto mt-8 bg-white rounded-3xl shadow-lg border border-gray-100 p-6 sm:p-10 space-y-8"
       >
-        <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#F5BA45]">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center text-[#F5BA45]">
           Resultado Final
         </h2>
 
-        {/* 🔹 Informações básicas */}
+        {/* 🔹 Informações Básicas */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {[
             { label: "Altura", value: `${initialState.height} cm` },
@@ -146,39 +140,148 @@ export default function ResultPage() {
           ))}
         </div>
 
-        {/* 🔸 Campos editáveis */}
-        <div className="space-y-4">
-          {[
-            { label: "Sexo", name: "gender" },
-            { label: "Objetivo", name: "goal" },
-            { label: "Refeições", name: "meals" },
-            { label: "Atividade", name: "activityLevel" },
-            { label: "Restrições", name: "restrictions" },
-            { label: "Treino", name: "trainingType" },
-            { label: "Suplementos", name: "supplements" },
-            { label: "Alimentos", name: "foods" },
-          ].map((item, index) => (
-            <div
-              key={index}
-              className="w-full bg-gray-50 rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition"
+        {/* 🔸 Campos Editáveis */}
+        <div className="space-y-6">
+          {/* Sexo */}
+          <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
+            <label className="block mb-2 font-semibold text-gray-700">Sexo:</label>
+            <select
+              name="gender"
+              value={editableFields.gender}
+              onChange={handleInputChange}
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
             >
-              <label
-                htmlFor={item.name}
-                className="block mb-1 font-semibold text-gray-700"
-              >
-                {item.label}
-              </label>
-              <input
-                type="text"
-                id={item.name}
-                name={item.name}
-                value={editableFields[item.name]}
-                onChange={handleInputChange}
-                className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#F5BA45] bg-white text-gray-800"
-                placeholder={`Digite ${item.label.toLowerCase()}`}
-              />
-            </div>
-          ))}
+              <option value="">Selecione</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Feminino">Feminino</option>
+            </select>
+          </div>
+
+          {/* Objetivo */}
+          <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
+            <label className="block mb-2 font-semibold text-gray-700">Objetivo:</label>
+            <select
+              name="goal"
+              value={editableFields.goal}
+              onChange={handleInputChange}
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
+            >
+              <option value="">Selecione</option>
+              <option value="Emagrecimento">Emagrecimento</option>
+              <option value="Manutenção">Manutenção</option>
+              <option value="Condicionamento Físico">Condicionamento Físico</option>
+              <option value="Hipertrofia">Hipertrofia</option>
+            </select>
+          </div>
+
+          {/* Refeições */}
+          <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
+            <label className="block mb-2 font-semibold text-gray-700">
+              Número de refeições que deseja realizar no dia (máx. 8):
+            </label>
+            <input
+              type="number"
+              name="meals"
+              min="1"
+              max="8"
+              value={editableFields.meals}
+              onChange={handleInputChange}
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
+              placeholder="Digite entre 1 e 8"
+            />
+          </div>
+
+          {/* Atividade */}
+          <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
+            <label className="block mb-2 font-semibold text-gray-700">
+              Qual o seu nível de treinamento?
+            </label>
+            <select
+              name="activityLevel"
+              value={editableFields.activityLevel}
+              onChange={handleInputChange}
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
+            >
+              <option value="">Selecione</option>
+              <option value="Sedentário">Sedentário</option>
+              <option value="Intermediário">Intermediário</option>
+              <option value="Avançado">Avançado</option>
+              <option value="Profissional">Profissional</option>
+            </select>
+          </div>
+
+          {/* Restrições */}
+          <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
+            <label className="block mb-2 font-semibold text-gray-700">
+              Existe alguma restrição alimentar?
+            </label>
+            <input
+              type="text"
+              name="restrictions"
+              value={editableFields.restrictions}
+              onChange={handleInputChange}
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
+              placeholder="Exemplo: lactose, glúten, etc."
+            />
+          </div>
+
+          {/* Treino */}
+          <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
+            <label className="block mb-2 font-semibold text-gray-700">
+              Escreva a modalidade de treino que realiza:
+            </label>
+            <input
+              type="text"
+              name="trainingType"
+              value={editableFields.trainingType}
+              onChange={handleInputChange}
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
+              placeholder="Exemplo: musculação, corrida, crossfit..."
+            />
+          </div>
+
+          {/* Suplementos */}
+          <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
+            <label className="block mb-2 font-semibold text-gray-700">
+              Quais suplementos você toma?
+            </label>
+            <input
+              type="text"
+              name="supplements"
+              value={editableFields.supplements}
+              onChange={handleInputChange}
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
+              placeholder="Exemplo: whey, creatina, multivitamínico..."
+            />
+          </div>
+
+          {/* Alimentos com autocomplete */}
+          <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
+            <label className="block mb-2 font-semibold text-gray-700">
+              Escreva detalhadamente os seus alimentos da rotina diária:
+            </label>
+            <input
+              type="text"
+              name="foods"
+              list="foodSuggestions"
+              value={editableFields.foods}
+              onChange={handleInputChange}
+              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
+              placeholder="Exemplo: arroz, feijão, frango, salada, banana..."
+            />
+            <datalist id="foodSuggestions">
+              <option value="Arroz" />
+              <option value="Feijão" />
+              <option value="Frango" />
+              <option value="Salada" />
+              <option value="Ovo" />
+              <option value="Banana" />
+              <option value="Aveia" />
+              <option value="Iogurte desnatado" />
+              <option value="Batata doce" />
+              <option value="Carne vermelha" />
+            </datalist>
+          </div>
         </div>
 
         {/* 🔹 Botão principal */}
@@ -192,7 +295,7 @@ export default function ResultPage() {
               <motion.div
                 className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                 animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
+                transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
               />
               Gerando Dieta...
             </>
@@ -201,7 +304,7 @@ export default function ResultPage() {
           )}
         </button>
 
-        {/* 🔸 Mensagens */}
+        {/* Mensagens */}
         {statusMessage && (
           <p className="text-center text-gray-600 font-medium mt-4">{statusMessage}</p>
         )}

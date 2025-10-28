@@ -23,7 +23,6 @@ export default function TmbCalculation() {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
-  // ✅ Carregar dados salvos do Firestore
   useEffect(() => {
     const carregarDados = async () => {
       const user = auth.currentUser;
@@ -34,7 +33,6 @@ export default function TmbCalculation() {
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data();
-
           setFormData({
             height: data.height || "",
             weight: data.weight || "",
@@ -43,7 +41,6 @@ export default function TmbCalculation() {
             goal: data.goal || "Emagrecimento",
             meals: data.meals || 6,
           });
-
           setTmbResult(data.tmbResult || null);
           setProtein(data.protein || null);
           setCarb(data.carb || null);
@@ -53,17 +50,20 @@ export default function TmbCalculation() {
         console.error("Erro ao carregar dados do Firestore:", error);
       }
     };
-
     carregarDados();
   }, []);
 
-  // Atualiza os campos do formulário
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // 🧩 Validação de campos numéricos
+    if (name === "height" && value > 300) return; // máx 3m
+    if (name === "weight" && value > 300) return; // máx 300kg
+    if (name === "age" && value > 100) return; // máx 100 anos
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Calcula TMB + macronutrientes + salva no Firestore
   const calcularTmb = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -75,7 +75,6 @@ export default function TmbCalculation() {
       return;
     }
 
-    // 🔹 Cálculo da TMB base
     let resultadoTmb;
     if (sex === "Masculino") {
       resultadoTmb = 66 + 13.7 * weight + 5 * height - 6.8 * age;
@@ -83,12 +82,10 @@ export default function TmbCalculation() {
       resultadoTmb = 655 + 9.6 * weight + 1.8 * height - 4.7 * age;
     }
 
-    // 🔹 Ajuste por objetivo
     let tmbAjustado = resultadoTmb;
     if (goal === "Emagrecimento") tmbAjustado *= 0.85;
     if (goal === "Hipertrofia") tmbAjustado *= 1.15;
 
-    // 🔹 Macronutrientes
     const proteina = (weight * 2).toFixed(0);
     const gordura = (weight * 0.8).toFixed(0);
     const carboidrato = (
@@ -100,7 +97,6 @@ export default function TmbCalculation() {
     setCarb(carboidrato);
     setFat(gordura);
 
-    // 🔥 Salva no Firestore (coleção "users")
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("Usuário não autenticado.");
@@ -125,7 +121,6 @@ export default function TmbCalculation() {
       );
 
       setSuccessMsg("✅ Dados salvos com sucesso no seu perfil!");
-      console.log("TMB e dados físicos atualizados no Firestore!");
     } catch (error) {
       console.error("Erro ao salvar TMB:", error);
       setSuccessMsg("❌ Erro ao salvar os dados no banco.");
@@ -134,59 +129,62 @@ export default function TmbCalculation() {
     }
   };
 
-  const irParaProximaPagina = () => {
-    navigate("/dashboard/avaliacao");
-  };
+  const irParaProximaPagina = () => navigate("/dashboard/avaliacao");
 
   return (
-    <div className="max-w-4xl mx-auto p-6 sm:p-10 space-y-10 font-sans text-gray-800">
-      {/* 🔹 Informação sobre TMB */}
-      <div className="bg-white p-6 sm:p-10 rounded-3xl shadow-lg border border-gray-100">
-        <TmbInfo />
-      </div>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 font-sans text-gray-800">
 
-      {/* 🔹 Calculadora */}
-      <div className="bg-white p-6 sm:p-10 rounded-3xl shadow-lg border border-gray-100 space-y-6">
-        <h2 className="text-2xl font-bold text-[#F5BA45] text-center">
+      {/* 🔹 Calculadora de TMB (AGORA NO TOPO) */}
+      <div className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100 space-y-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-[#F5BA45] text-center">
           ⚙️ Calculadora de TMB
         </h2>
 
         <form
           onSubmit={calcularTmb}
-          className="grid grid-cols-2 gap-4 text-gray-800"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-800"
         >
           <input
             type="number"
             name="height"
-            placeholder="Altura (cm)"
+            placeholder="Altura (cm) — máx 300"
             value={formData.height}
             onChange={handleChange}
-            className="border rounded-lg p-2 focus:ring-2 focus:ring-[#F5BA45]"
+            min="50"
+            max="300"
+            step="1"
+            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
             required
           />
           <input
             type="number"
             name="weight"
-            placeholder="Peso (kg)"
+            placeholder="Peso (kg) — máx 300"
             value={formData.weight}
             onChange={handleChange}
-            className="border rounded-lg p-2 focus:ring-2 focus:ring-[#F5BA45]"
+            min="20"
+            max="300"
+            step="0.1"
+            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
             required
           />
           <input
             type="number"
             name="age"
-            placeholder="Idade"
+            placeholder="Idade (anos) — máx 100"
             value={formData.age}
             onChange={handleChange}
-            className="border rounded-lg p-2 focus:ring-2 focus:ring-[#F5BA45]"
+            min="10"
+            max="100"
+            step="1"
+            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
             required
           />
           <select
             name="sex"
             value={formData.sex}
             onChange={handleChange}
-            className="border rounded-lg p-2 focus:ring-2 focus:ring-[#F5BA45]"
+            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
             required
           >
             <option value="">Sexo</option>
@@ -197,35 +195,27 @@ export default function TmbCalculation() {
             name="goal"
             value={formData.goal}
             onChange={handleChange}
-            className="border rounded-lg p-2 focus:ring-2 focus:ring-[#F5BA45]"
+            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
           >
             <option value="Emagrecimento">Emagrecimento</option>
             <option value="Hipertrofia">Hipertrofia</option>
             <option value="Manutenção">Manutenção</option>
           </select>
-          <input
-            type="number"
-            name="meals"
-            placeholder="Refeições por dia"
-            value={formData.meals}
-            onChange={handleChange}
-            className="border rounded-lg p-2 focus:ring-2 focus:ring-[#F5BA45]"
-          />
+        
 
           <button
             type="submit"
             disabled={loading}
-            className={`col-span-2 ${
+            className={`col-span-1 sm:col-span-2 ${
               loading ? "bg-gray-400" : "bg-[#F5BA45] hover:bg-[#e2a93f]"
-            } text-white font-semibold py-2 rounded-lg transition`}
+            } text-white font-semibold py-2 rounded-lg transition w-full`}
           >
             {loading ? "Salvando..." : "Calcular e Salvar TMB"}
           </button>
         </form>
 
-        {/* 🔸 Resultado */}
         {tmbResult && (
-          <div className="bg-gray-50 border rounded-xl p-6 text-center text-gray-800 space-y-2">
+          <div className="bg-gray-50 border rounded-xl p-4 sm:p-6 text-center text-gray-800 space-y-2">
             <p className="font-semibold text-lg">
               Sua TMB ajustada:{" "}
               <span className="text-[#F5BA45]">{tmbResult} kcal</span>
@@ -248,6 +238,11 @@ export default function TmbCalculation() {
             {successMsg}
           </p>
         )}
+      </div>
+
+      {/* 🔸 Informações sobre TMB (AGORA ABAIXO) */}
+      <div className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100">
+        <TmbInfo />
       </div>
     </div>
   );
