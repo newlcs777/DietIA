@@ -1,22 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Disclaimer from "../components/Profile/Disclaimer";
 import { motion } from "framer-motion";
 import { gerarDieta } from "../services/api";
+import { useUserData } from "../contexts/UserDataContext";
 
 export default function ResultPage() {
-  const location = useLocation();
   const navigate = useNavigate();
+  const { userData, loadingUserData, updateUserData } = useUserData();
 
-  const savedData = JSON.parse(localStorage.getItem("dadosUsuario")) || {};
-
-  const initialState = location.state || savedData || {
-    height: 0,
-    weight: 0,
-    age: 0,
+  // campos que o usuário escolhe pra gerar a dieta personalizada
+  const [editableFields, setEditableFields] = useState({
     gender: "",
-    tmbResult: 0,
-    percentualGordura: 0,
     goal: "",
     meals: "",
     activityLevel: "",
@@ -24,33 +19,38 @@ export default function ResultPage() {
     trainingType: "",
     supplements: "",
     foods: "",
-  };
-
-  const [editableFields, setEditableFields] = useState({
-    gender: initialState.gender || "",
-    goal: initialState.goal || "",
-    meals: initialState.meals || "",
-    activityLevel: initialState.activityLevel || "",
-    restrictions: initialState.restrictions || "",
-    trainingType: initialState.trainingType || "",
-    supplements: initialState.supplements || "",
-    foods: initialState.foods || "",
-    percentualGordura: initialState.percentualGordura || 0,
+    percentualGordura: 0,
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loadingGenerate, setLoadingGenerate] = useState(false);
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
+  // quando userData carrega, sincroniza com os campos editáveis
   useEffect(() => {
-    const dadosCompletos = { ...initialState, ...editableFields };
-    localStorage.setItem("dadosUsuario", JSON.stringify(dadosCompletos));
-  }, [editableFields, initialState]);
+    if (!loadingUserData && userData) {
+      setEditableFields((prev) => ({
+        ...prev,
+        gender: userData.sex || prev.gender || "",
+        goal: userData.goal || prev.goal || "",
+        meals: userData.meals || prev.meals || "",
+        activityLevel: userData.activityLevel || prev.activityLevel || "",
+        restrictions: userData.restrictions || prev.restrictions || "",
+        trainingType: userData.trainingType || prev.trainingType || "",
+        supplements: userData.supplements || prev.supplements || "",
+        foods: userData.foods || prev.foods || "",
+        percentualGordura:
+          userData.percentualGordura ??
+          prev.percentualGordura ??
+          0,
+      }));
+    }
+  }, [userData, loadingUserData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === "meals" && Number(value) > 8) return; // Limite máximo de 8 refeições
+    if (name === "meals" && Number(value) > 8) return;
 
     setEditableFields((prev) => ({
       ...prev,
@@ -59,21 +59,51 @@ export default function ResultPage() {
   };
 
   const handleGenerateDiet = async () => {
-    if (loading) return;
-    setLoading(true);
+    if (loadingGenerate) return;
+
+    setLoadingGenerate(true);
     setError("");
     setStatusMessage("⏳ Gerando dieta personalizada...");
 
     try {
-      const diet = await gerarDieta({ ...initialState, ...editableFields });
+      // monta o pacote de dados atualizados pra IA
+      const pacote = {
+        height: userData?.height ?? 0,
+        weight: userData?.weight ?? 0,
+        age: userData?.age ?? 0,
+        tmbResult: userData?.tmbResult ?? 0,
+        percentualGordura:
+          editableFields.percentualGordura ??
+          userData?.percentualGordura ??
+          0,
+        ...editableFields,
+      };
+
+      const diet = await gerarDieta(pacote);
+
       const textoPlano =
         typeof diet === "string"
           ? diet
           : diet?.[0]?.generated_text || JSON.stringify(diet, null, 2);
 
+      // salva a dieta gerada no localStorage (pra página /dashboard/dieta ler)
       localStorage.setItem("dietaGerada", textoPlano);
-      const dadosCompletos = { ...initialState, ...editableFields };
-      localStorage.setItem("dadosUsuario", JSON.stringify(dadosCompletos));
+
+      // salva preferências do usuário no Firestore (refeições, objetivo etc)
+      await updateUserData({
+        sex: editableFields.gender || "",
+        goal: editableFields.goal || "",
+        meals: editableFields.meals || "",
+        activityLevel: editableFields.activityLevel || "",
+        restrictions: editableFields.restrictions || "",
+        trainingType: editableFields.trainingType || "",
+        supplements: editableFields.supplements || "",
+        foods: editableFields.foods || "",
+        percentualGordura:
+          editableFields.percentualGordura ??
+          userData?.percentualGordura ??
+          0,
+      });
 
       setStatusMessage("✅ Dieta gerada com sucesso!");
       navigate("/dashboard/dieta");
@@ -91,12 +121,21 @@ export default function ResultPage() {
 
       setStatusMessage("");
     } finally {
-      setLoading(false);
+      setLoadingGenerate(false);
     }
   };
 
+  if (loadingUserData && !userData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-700 text-lg">
+        Carregando dados...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fffdfa] via-gray-50 to-gray-100 font-sans text-gray-800 py-8 px-4 sm:px-6 lg:px-8">
+      {/* Aviso inicial */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -105,6 +144,7 @@ export default function ResultPage() {
         <Disclaimer />
       </motion.div>
 
+      {/* Card principal */}
       <motion.div
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
@@ -115,16 +155,25 @@ export default function ResultPage() {
           Resultado Final
         </h2>
 
-        {/* 🔹 Informações Básicas */}
+        {/* 🔹 Bloco de informações calculadas */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {[
-            { label: "Altura", value: `${initialState.height} cm` },
-            { label: "Peso", value: `${initialState.weight} kg` },
-            { label: "Idade", value: `${initialState.age} anos` },
-            { label: "TMB", value: `${Number(initialState.tmbResult).toFixed(0)} kcal` },
+            { label: "Altura", value: `${userData?.height ?? "—"} cm` },
+            { label: "Peso", value: `${userData?.weight ?? "—"} kg` },
+            { label: "Idade", value: `${userData?.age ?? "—"} anos` },
+            {
+              label: "TMB",
+              value: `${Number(userData?.tmbResult ?? 0).toFixed(0)} kcal`,
+            },
             {
               label: "Gordura Corporal",
-              value: `${Number(initialState.percentualGordura).toFixed(2)}%`,
+              value: `${
+                Number(
+                  userData?.percentualGordura ??
+                    editableFields.percentualGordura ??
+                    0
+                ).toFixed(2)
+              }%`,
             },
           ].map((item, index) => (
             <motion.div
@@ -132,15 +181,17 @@ export default function ResultPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.05 }}
-              className="w-full p-4 bg-gray-50 rounded-2xl shadow-inner flex flex-col items-center justify-center"
+              className="w-full p-4 bg-gray-50 rounded-2xl shadow-inner flex flex-col items-center justify-center text-center"
             >
               <p className="text-gray-600 text-sm">{item.label}</p>
-              <p className="text-gray-900 font-semibold text-lg mt-1">{item.value}</p>
+              <p className="text-gray-900 font-semibold text-lg mt-1 break-words">
+                {item.value}
+              </p>
             </motion.div>
           ))}
         </div>
 
-        {/* 🔸 Campos Editáveis */}
+        {/* 🔸 Campos editáveis que personalizam a dieta */}
         <div className="space-y-6">
           {/* Sexo */}
           <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
@@ -177,7 +228,7 @@ export default function ResultPage() {
           {/* Refeições */}
           <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
             <label className="block mb-2 font-semibold text-gray-700">
-              Número de refeições que deseja realizar no dia (máx. 8):
+              Número de refeições no dia (máx. 8):
             </label>
             <input
               type="number"
@@ -191,7 +242,7 @@ export default function ResultPage() {
             />
           </div>
 
-          {/* Atividade */}
+          {/* Nível de treino */}
           <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
             <label className="block mb-2 font-semibold text-gray-700">
               Qual o seu nível de treinamento?
@@ -221,7 +272,7 @@ export default function ResultPage() {
               value={editableFields.restrictions}
               onChange={handleInputChange}
               className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
-              placeholder="Exemplo: lactose, glúten, etc."
+              placeholder="Exemplo: lactose, glúten..."
             />
           </div>
 
@@ -255,10 +306,10 @@ export default function ResultPage() {
             />
           </div>
 
-          {/* Alimentos com autocomplete */}
+          {/* Alimentos */}
           <div className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
             <label className="block mb-2 font-semibold text-gray-700">
-              Escreva detalhadamente os seus alimentos da rotina diária:
+              Escreva detalhadamente seus alimentos da rotina diária:
             </label>
             <input
               type="text"
@@ -267,7 +318,7 @@ export default function ResultPage() {
               value={editableFields.foods}
               onChange={handleInputChange}
               className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#F5BA45]"
-              placeholder="Exemplo: arroz, feijão, frango, salada, banana..."
+              placeholder="Ex: arroz, feijão, frango, salada, banana..."
             />
             <datalist id="foodSuggestions">
               <option value="Arroz" />
@@ -284,18 +335,18 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* 🔹 Botão principal */}
+        {/* Botão principal */}
         <button
           onClick={handleGenerateDiet}
-          disabled={loading}
+          disabled={loadingGenerate}
           className="w-full bg-[#F5BA45] hover:bg-[#e2a93f] text-white font-semibold py-3 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 disabled:bg-gray-400"
         >
-          {loading ? (
+          {loadingGenerate ? (
             <>
               <motion.div
                 className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                 animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+                transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
               />
               Gerando Dieta...
             </>
@@ -306,7 +357,9 @@ export default function ResultPage() {
 
         {/* Mensagens */}
         {statusMessage && (
-          <p className="text-center text-gray-600 font-medium mt-4">{statusMessage}</p>
+          <p className="text-center text-gray-600 font-medium mt-4">
+            {statusMessage}
+          </p>
         )}
         {error && (
           <p className="text-center text-red-600 font-medium mt-2">{error}</p>

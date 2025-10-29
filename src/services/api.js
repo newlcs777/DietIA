@@ -26,12 +26,13 @@ Inclua apenas:
 
 Regras importantes:
 1. Liste cada refeição em um bloco separado, com nome da refeição e os alimentos correspondentes.
-2. Todas as quantidades devem estar em gramas (g), mililitros (ml) ou unidades.
+2. Todas as quantidades devem estar em gramas (g), mililitros (ml) ou unidades e todas refeicoes deve mostrar quantidade de macro deles
 3. Não escreva observações, recomendações, metas, considerações, notas, lembretes, variações ou mensagens extras.
 4. Não use asteriscos (*), hashtags (#), emojis, negritos, itálicos, traços ou qualquer caractere especial.
 5. Retorne apenas texto limpo, com uma linha em branco entre cada refeição.
 6. Escreva de forma organizada, com boa legibilidade e espaçamento.
-7.coloque a quantidade de agua de acordo com o peso 35ml por kilo
+7.coloque a quantidade de agua de acordo com o peso 35ml por kg dividido em cada refeição 
+ 
 
 Dados do cliente:
 Altura: ${dadosUsuario.height} cm

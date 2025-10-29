@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { UserDataProvider } from "./contexts/UserDataContext"; // 🧠 Novo provider global
 import ConfiguracoesPage from "./pages/ConfiguracoesPage";
 
 import LoginPage from "./pages/LoginPage";
@@ -18,39 +19,37 @@ import DietaIAPage from "./pages/DietaIAPage";
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* 🔓 Páginas públicas */}
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <UserDataProvider> {/* ✅ Adicionado aqui */}
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* 🔓 Páginas públicas */}
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-          {/* 🔒 Páginas privadas (painel com menu lateral) */}
-          <Route element={<DashboardLayout />}>
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/profile/settings" element={<ProfileSettingsPage />} />
+            {/* 🔒 Páginas privadas (painel com menu lateral) */}
+            <Route element={<DashboardLayout />}>
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/profile/settings" element={<ProfileSettingsPage />} />
 
-            {/* 🧠 Dashboard principal */}
-            <Route path="/dashboard" element={<DashboardPage />}>
-              <Route index element={<Navigate to="profile" replace />} />
-              <Route path="profile" element={<DashboardProfile />} />
-              <Route path="avaliacao" element={<FoldsAssessment />} />
-              <Route path="resultado" element={<ResultPage />} />
-              <Route path="dieta" element={<DietaIAPage />} />
+              {/* 🧠 Dashboard principal */}
+              <Route path="/dashboard" element={<DashboardPage />}>
+                <Route index element={<Navigate to="profile" replace />} />
+                <Route path="profile" element={<DashboardProfile />} />
+                <Route path="avaliacao" element={<FoldsAssessment />} />
+                <Route path="resultado" element={<ResultPage />} />
+                <Route path="dieta" element={<DietaIAPage />} />
+                <Route path="config" element={<ConfiguracoesPage />} />
+              </Route>
 
-  
-              
-<Route path="config" element={<ConfiguracoesPage />} />
+              {/* ✅ dentro do dashboard (igual o TMB) */}
+              <Route path="/dashboard/avaliacao" element={<FoldsAssessment />} />
             </Route>
-
-            
-{/* ✅ dentro do dashboard (igual o TMB) */}
-<Route path="/dashboard/avaliacao" element={<FoldsAssessment />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </UserDataProvider>
   );
 }
 
