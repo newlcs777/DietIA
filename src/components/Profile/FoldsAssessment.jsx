@@ -4,8 +4,10 @@ import { db, auth } from "../../services/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import PhysicalAssessmentInfo from "./PhysicalAssessmentInfo";
 import { useUserData } from "../../contexts/UserDataContext";
+import { useNavigate } from "react-router-dom";
 
 export default function FoldsAssessment() {
+  const navigate = useNavigate();
   const { userData, loadingUserData, updateUserData } = useUserData();
 
   const [age, setAge] = useState(0);
@@ -24,7 +26,7 @@ export default function FoldsAssessment() {
   const [mensagem, setMensagem] = useState("");
   const [salvandoIdadeLive, setSalvandoIdadeLive] = useState(false);
 
-  // 1. Carrega dados iniciais
+  // 🔹 Carrega dados iniciais
   useEffect(() => {
     const carregar = async () => {
       const user = auth.currentUser;
@@ -34,15 +36,10 @@ export default function FoldsAssessment() {
       }
 
       try {
-        // pega dobras salvas
         const ref = doc(db, "physicalAssessments", user.uid);
         const snap = await getDoc(ref);
 
-        // 🔑 prioridade para preencher idade:
-        // 1º userData.age (mais confiável / global)
-        // 2º idade salva na avaliação física (fallback antigo)
         const idadeInicial = userData?.age ?? (snap.exists() ? snap.data().age : 0);
-
         setAge(idadeInicial || 0);
 
         if (snap.exists()) {
@@ -62,27 +59,15 @@ export default function FoldsAssessment() {
       }
     };
 
-    // só roda depois que o contexto terminou de carregar
-    if (!loadingUserData) {
-      carregar();
-    }
+    if (!loadingUserData) carregar();
   }, [loadingUserData, userData]);
 
-  // 2. Recalcula soma e % gordura sempre que dados mudam
+  // 🔹 Recalcula soma e percentual de gordura
   useEffect(() => {
-    const soma =
-      subescapular +
-      triciptal +
-      axiliar +
-      supra +
-      peitoral +
-      abdominal +
-      coxa;
-
+    const soma = subescapular + triciptal + axiliar + supra + peitoral + abdominal + coxa;
     setResultado(soma);
 
     if (age > 0 && soma > 0) {
-      // Fórmula Jackson & Pollock 7 dobras (masculino)
       const densidade =
         1.112 -
         0.00043499 * soma +
@@ -96,14 +81,14 @@ export default function FoldsAssessment() {
     }
   }, [subescapular, triciptal, axiliar, supra, peitoral, abdominal, coxa, age]);
 
-  // 3. Handler genérico para inputs das dobras
+  // 🔹 Inputs das dobras
   const handleInput = (setter) => (e) => {
     const value = parseFloat(e.target.value);
     if (value > 100) return;
     setter(isNaN(value) ? 0 : value);
   };
 
-  // 4. Salva avaliação física completa (botão amarelo)
+  // 🔹 Salva avaliação física e redireciona
   const salvarAvaliacao = async () => {
     const user = auth.currentUser;
     if (!user) {
@@ -112,44 +97,46 @@ export default function FoldsAssessment() {
     }
 
     try {
-      // salva o bloco de avaliação física em physicalAssessments/{uid}
-      await setDoc(
-        doc(db, "physicalAssessments", user.uid),
-        {
-          age: age || 0,
-          subescapular,
-          triciptal,
-          axiliar,
-          supra,
-          peitoral,
-          abdominal,
-          coxa,
-          resultado,
-          percentualGordura: percentualGordura
-            ? percentualGordura.toFixed(2)
-            : "0",
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      const dadosAvaliacao = {
+        age: age || 0,
+        subescapular,
+        triciptal,
+        axiliar,
+        supra,
+        peitoral,
+        abdominal,
+        coxa,
+        resultado,
+        percentualGordura: percentualGordura ? percentualGordura.toFixed(2) : "0",
+        updatedAt: new Date().toISOString(),
+      };
 
-      // sincroniza dados importantes no perfil global do usuário
+      // salva no Firestore
+      await setDoc(doc(db, "physicalAssessments", user.uid), dadosAvaliacao, { merge: true });
+
+      // atualiza contexto global
       await updateUserData({
         age: Number(age) || 0,
-        percentualGordura: percentualGordura
-          ? Number(percentualGordura.toFixed(2))
-          : 0,
+        percentualGordura: percentualGordura ? Number(percentualGordura.toFixed(2)) : 0,
         resultadoDobras: resultado || 0,
       });
 
+      // salva também localmente (para o ResultPage exibir de imediato)
+      localStorage.setItem("dadosAvaliacao", JSON.stringify(dadosAvaliacao));
+
       setMensagem("✅ Avaliação física salva e sincronizada!");
+
+      // redireciona corretamente dentro do dashboard
+      setTimeout(() => {
+        navigate("/dashboard/resultado");
+      }, 1000);
     } catch (err) {
       console.error("Erro ao salvar avaliação física:", err);
       setMensagem("❌ Erro ao salvar os dados.");
     }
   };
 
-  // 5. Salvar idade em tempo real assim que o usuário muda
+  // 🔹 Atualiza idade em tempo real
   const handleAgeChangeLive = async (e) => {
     const val = parseInt(e.target.value, 10);
     if (val > 100) return;
@@ -157,30 +144,21 @@ export default function FoldsAssessment() {
     const idadeFinal = isNaN(val) ? 0 : val;
     setAge(idadeFinal);
 
-    // Se idade não mudou de fato, nem precisa salvar
     if (idadeFinal === userData?.age) return;
 
     try {
       setSalvandoIdadeLive(true);
-
-      // isso atualiza direto users/{uid} e dispara o onSnapshot do contexto
-      await updateUserData({
-        age: idadeFinal,
-      });
-
-      // não mexe em physicalAssessments aqui, só no global
-      // physicalAssessments continua sendo atualizado no botão principal
-
+      await updateUserData({ age: idadeFinal });
       setMensagem("💾 Idade atualizada no perfil!");
     } catch (err) {
-      console.error("Erro ao salvar idade no perfil:", err);
+      console.error("Erro ao salvar idade:", err);
       setMensagem("❌ Não foi possível salvar a idade agora.");
     } finally {
       setSalvandoIdadeLive(false);
     }
   };
 
-  // 6. Loading states
+  // 🔹 Tela de carregamento
   if (loadingUserData || loadingPage) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-700 text-lg">
@@ -189,7 +167,7 @@ export default function FoldsAssessment() {
     );
   }
 
-  // 7. UI
+  // 🔹 Interface principal
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -224,26 +202,22 @@ export default function FoldsAssessment() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Idade */}
             <div className="sm:col-span-2">
-              <label className="block text-gray-700 font-medium mb-1">
-                Idade:
-              </label>
+              <label className="block text-gray-700 font-medium mb-1">Idade:</label>
               <input
                 type="number"
                 value={age}
-                onChange={handleAgeChangeLive} // 🔥 salva direto no perfil global
+                onChange={handleAgeChangeLive}
                 className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#F5BA45]"
                 placeholder="Digite sua idade (máx 100)"
                 min="10"
                 max="100"
               />
               {salvandoIdadeLive && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Salvando idade...
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Salvando idade...</p>
               )}
             </div>
 
-            {/* Entradas de dobras */}
+            {/* Entradas das dobras */}
             {[
               { label: "Subescapular", value: subescapular, setValue: setSubescapular },
               { label: "Triciptal", value: triciptal, setValue: setTriciptal },
@@ -254,9 +228,7 @@ export default function FoldsAssessment() {
               { label: "Coxa", value: coxa, setValue: setCoxa },
             ].map(({ label, value, setValue }, index) => (
               <div key={index}>
-                <label className="block text-gray-700 font-medium mb-1">
-                  {label} (mm):
-                </label>
+                <label className="block text-gray-700 font-medium mb-1">{label} (mm):</label>
                 <input
                   type="number"
                   value={value}
@@ -275,11 +247,8 @@ export default function FoldsAssessment() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className={`text-center font-medium ${
-                mensagem.includes("sincronizada") ||
-                mensagem.includes("atualizada")
+                mensagem.includes("✅")
                   ? "text-green-600"
-                  : mensagem.includes("salvando")
-                  ? "text-gray-500"
                   : mensagem.includes("❌")
                   ? "text-red-600"
                   : "text-gray-600"
@@ -289,6 +258,7 @@ export default function FoldsAssessment() {
             </motion.p>
           )}
 
+          {/* Botão principal */}
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={salvarAvaliacao}

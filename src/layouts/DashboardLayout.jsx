@@ -26,6 +26,7 @@ export default function DashboardLayout() {
             onClick={() => navigate("/dashboard/profile")}
             className="text-lg sm:text-xl font-bold text-[#F5BA45] cursor-pointer select-none"
           >
+            
             Consultor Inteligente
           </h1>
 
@@ -48,20 +49,16 @@ export default function DashboardLayout() {
         </nav>
       </header>
 
-      {/* 🔸 Conteúdo principal */}
-      <main className="flex-1 flex justify-center items-start px-2 sm:px-6 lg:px-10 py-10">
-        {/* Fundo cinza expandido */}
-        <div className="w-full bg-gray-100 rounded-3xl shadow-inner p-4 sm:p-8">
-          {/* Card branco mais largo */}
-          <div className="max-w-7xl w-full mx-auto bg-white rounded-3xl shadow-lg p-6 sm:p-10 border border-[#F5BA45]/20 transition-all">
-            <Outlet />
-          </div>
+      {/* 🔸 Conteúdo principal (apenas Outlet, sem duplicar o card lateral) */}
+      <main className="flex-1 flex justify-center items-start p-4 sm:p-8 lg:p-10 mt-8">
+        <div className="w-full max-w-6xl bg-white rounded-3xl shadow-lg p-6 sm:p-8 border border-[#F5BA45]/20">
+          <Outlet />
         </div>
       </main>
 
       {/* 🔻 Rodapé */}
       <footer className="text-center text-xs text-gray-500 py-4">
-        © {new Date().getFullYear()} Consultor Inteligente · Todos os direitos reservados ao Lucas Cardoso
+        © {new Date().getFullYear()} Consultor Inteligente · Todos os direitos reservados
       </footer>
     </div>
   );
