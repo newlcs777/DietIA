@@ -7,7 +7,6 @@ export default function TmbCalculation() {
   const navigate = useNavigate();
   const { userData, loadingUserData, updateUserData } = useUserData();
 
-  // estado local só pra edição do formulário
   const [formData, setFormData] = useState({
     height: "",
     weight: "",
@@ -17,16 +16,13 @@ export default function TmbCalculation() {
     meals: 6,
   });
 
-  // resultados calculados
   const [tmbResult, setTmbResult] = useState(null);
   const [protein, setProtein] = useState(null);
   const [carb, setCarb] = useState(null);
   const [fat, setFat] = useState(null);
-
   const [loadingCalc, setLoadingCalc] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
-  // quando userData chega/atualiza, joga pro formulário
   useEffect(() => {
     if (!loadingUserData && userData) {
       setFormData({
@@ -37,7 +33,6 @@ export default function TmbCalculation() {
         goal: userData.goal ?? "Emagrecimento",
         meals: userData.meals ?? 6,
       });
-
       setTmbResult(userData.tmbResult ?? null);
       setProtein(userData.protein ?? null);
       setCarb(userData.carb ?? null);
@@ -47,11 +42,9 @@ export default function TmbCalculation() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     if (name === "height" && value > 300) return;
     if (name === "weight" && value > 300) return;
     if (name === "age" && value > 100) return;
-
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -66,7 +59,6 @@ export default function TmbCalculation() {
       return;
     }
 
-    // cálculo TMB
     let resultadoTmb;
     if (sex === "Masculino") {
       resultadoTmb = 66 + 13.7 * weight + 5 * height - 6.8 * age;
@@ -78,21 +70,18 @@ export default function TmbCalculation() {
     if (goal === "Emagrecimento") tmbAjustado *= 0.85;
     if (goal === "Hipertrofia") tmbAjustado *= 1.15;
 
-    // macros
     const proteinaCalc = (weight * 2).toFixed(0);
     const gorduraCalc = (weight * 0.8).toFixed(0);
     const carboCalc = (
       (tmbAjustado - (proteinaCalc * 4 + gorduraCalc * 9)) / 4
     ).toFixed(0);
 
-    // atualiza UI local
     const tmbStr = tmbAjustado.toFixed(0);
     setTmbResult(tmbStr);
     setProtein(proteinaCalc);
     setCarb(carboCalc);
     setFat(gorduraCalc);
 
-    // salva globalmente no Firestore
     await updateUserData({
       height: Number(height),
       weight: Number(weight),
@@ -121,9 +110,9 @@ export default function TmbCalculation() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 font-sans text-gray-800">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans text-gray-800">
       {/* 🔹 Calculadora de TMB */}
-      <div className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100 space-y-6">
+      <div className="p-4 sm:p-6 md:p-10 rounded-2xl bg-white/70 backdrop-blur-sm shadow-sm space-y-6">
         <h2 className="text-xl sm:text-2xl font-bold text-[#F5BA45] text-center">
           ⚙️ Calculadora de TMB
         </h2>
@@ -135,39 +124,30 @@ export default function TmbCalculation() {
           <input
             type="number"
             name="height"
-            placeholder="Altura (cm) — máx 300"
+            placeholder="Altura (cm)"
             value={formData.height}
             onChange={handleChange}
-            min="50"
-            max="300"
-            step="1"
-            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
+            className="border border-gray-200 rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45] focus:border-transparent"
             required
           />
 
           <input
             type="number"
             name="weight"
-            placeholder="Peso (kg) — máx 300"
+            placeholder="Peso (kg)"
             value={formData.weight}
             onChange={handleChange}
-            min="20"
-            max="300"
-            step="0.1"
-            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
+            className="border border-gray-200 rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45] focus:border-transparent"
             required
           />
 
           <input
             type="number"
             name="age"
-            placeholder="Idade (anos) — máx 100"
+            placeholder="Idade"
             value={formData.age}
             onChange={handleChange}
-            min="10"
-            max="100"
-            step="1"
-            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
+            className="border border-gray-200 rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45] focus:border-transparent"
             required
           />
 
@@ -175,7 +155,7 @@ export default function TmbCalculation() {
             name="sex"
             value={formData.sex}
             onChange={handleChange}
-            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
+            className="border border-gray-200 rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45] focus:border-transparent"
             required
           >
             <option value="">Sexo</option>
@@ -187,7 +167,7 @@ export default function TmbCalculation() {
             name="goal"
             value={formData.goal}
             onChange={handleChange}
-            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45]"
+            className="border border-gray-200 rounded-lg p-2 w-full focus:ring-2 focus:ring-[#F5BA45] focus:border-transparent"
           >
             <option value="Emagrecimento">Emagrecimento</option>
             <option value="Hipertrofia">Hipertrofia</option>
@@ -208,7 +188,7 @@ export default function TmbCalculation() {
         </form>
 
         {tmbResult && (
-          <div className="bg-gray-50 border rounded-xl p-4 sm:p-6 text-center text-gray-800 space-y-2">
+          <div className="bg-white/60 rounded-xl p-5 sm:p-6 text-center space-y-2">
             <p className="font-semibold text-lg">
               Sua TMB ajustada:{" "}
               <span className="text-[#F5BA45]">{tmbResult} kcal</span>
@@ -233,8 +213,8 @@ export default function TmbCalculation() {
         )}
       </div>
 
-      {/* 🔸 Bloco educacional */}
-      <div className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100">
+      {/* 🔸 Bloco informativo */}
+      <div className="p-4 sm:p-6 md:p-10 rounded-2xl bg-white/60 backdrop-blur-sm shadow-sm">
         <TmbInfo />
       </div>
     </div>

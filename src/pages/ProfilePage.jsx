@@ -27,17 +27,18 @@ export default function DashboardLayout() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 font-sans text-gray-800">
+    <div className="min-h-screen flex flex-col font-sans text-gray-800 bg-gradient-to-b from-[#fffdf5] via-[#fffbea] to-[#fff7d9]">
       {/* 🔹 Navbar superior */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex justify-between items-center px-6 sm:px-10 py-4">
+      <header className="bg-white/90 backdrop-blur-md border-b border-yellow-100 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto flex justify-between items-center px-4 sm:px-8 py-3 sm:py-4">
           <h1
             onClick={() => navigate("/dashboard")}
-            className="text-lg sm:text-xl font-bold text-[#F5BA45] cursor-pointer"
+            className="text-lg sm:text-xl font-bold text-[#F5BA45] cursor-pointer select-none"
           >
             Consultor Inteligente
           </h1>
 
+          {/* Links desktop */}
           <nav className="hidden md:flex gap-6 text-sm font-medium">
             {navLinks.map(({ path, label }) => (
               <Link
@@ -54,10 +55,11 @@ export default function DashboardLayout() {
             ))}
           </nav>
 
+          {/* Perfil e logout */}
           <div className="flex items-center gap-4">
             {user && (
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-8 h-8 rounded-full bg-[#F5BA45] flex items-center justify-center text-white font-bold text-sm">
                   {user.displayName?.[0] || "U"}
                 </div>
                 <p className="hidden sm:block text-sm text-gray-700">
@@ -67,18 +69,18 @@ export default function DashboardLayout() {
             )}
             <button
               onClick={handleLogout}
-              className="p-2 rounded-full hover:bg-gray-100 transition"
+              className="p-2 rounded-full hover:bg-yellow-100 transition"
               title="Sair"
             >
-              <LogOut className="w-5 h-5 text-gray-600" />
+              <LogOut className="w-5 h-5 text-gray-700" />
             </button>
           </div>
         </div>
       </header>
 
       {/* 🔸 Conteúdo principal */}
-      <main className="flex flex-1 flex-col md:flex-row justify-center md:justify-between items-start p-6 sm:p-10 gap-8">
-        <div className="flex-1 bg-white rounded-2xl shadow-sm p-6 sm:p-8 border border-gray-100">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+        <div className="w-full">
           <Outlet />
         </div>
       </main>
