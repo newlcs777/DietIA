@@ -8,29 +8,55 @@ export default function ResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const savedData = JSON.parse(localStorage.getItem("dadosUsuario")) || {};
-  const initialState = location.state || savedData;
+  // 🔹 Função que junta dados de todas as páginas
+  const getAllData = () => {
+    const dadosUsuario = JSON.parse(localStorage.getItem("dadosUsuario")) || {};
+    const dadosTmb = JSON.parse(localStorage.getItem("dadosTmb")) || {};
+    const dadosAvaliacao = JSON.parse(localStorage.getItem("dadosAvaliacao")) || {};
+    const dadosPerfil = JSON.parse(localStorage.getItem("userProfile")) || {};
+    const stateData = location.state || {};
 
+    return {
+      ...dadosUsuario,
+      ...dadosTmb,
+      ...dadosAvaliacao,
+      ...dadosPerfil,
+      ...stateData,
+    };
+  };
+
+  const [dados, setDados] = useState(getAllData());
   const [editableFields, setEditableFields] = useState({
-    gender: initialState.gender || "",
-    goal: initialState.goal || "",
-    meals: initialState.meals || "",
-    activityLevel: initialState.activityLevel || "",
-    restrictions: initialState.restrictions || "",
-    trainingType: initialState.trainingType || "",
-    supplements: initialState.supplements || "",
-    foods: initialState.foods || "",
-    percentualGordura: initialState.percentualGordura || 0,
+    gender: dados.gender || dados.sex || "",
+    goal: dados.goal || "",
+    meals: dados.meals || "",
+    activityLevel: dados.activityLevel || "",
+    restrictions: dados.restrictions || "",
+    trainingType: dados.trainingType || "",
+    supplements: dados.supplements || "",
+    foods: dados.foods || "",
+    percentualGordura: dados.percentualGordura || dados.bodyFat || 0,
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
+  // ✅ Atualiza dados automaticamente a cada 500ms
   useEffect(() => {
-    const dadosCompletos = { ...initialState, ...editableFields };
-    localStorage.setItem("dadosUsuario", JSON.stringify(dadosCompletos));
-  }, [editableFields, initialState]);
+    const intervalo = setInterval(() => {
+      const novosDados = getAllData();
+
+      // só atualiza se algo realmente mudou
+      if (JSON.stringify(novosDados) !== JSON.stringify(dados)) {
+        setDados(novosDados);
+        const dadosCompletos = { ...novosDados, ...editableFields };
+        localStorage.setItem("dadosUsuario", JSON.stringify(dadosCompletos));
+      }
+    }, 500); // atualização suave e leve
+
+    return () => clearInterval(intervalo);
+  }, [dados, editableFields]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -45,7 +71,7 @@ export default function ResultPage() {
     setStatusMessage("⏳ Gerando dieta personalizada...");
 
     try {
-      const diet = await gerarDieta({ ...initialState, ...editableFields });
+      const diet = await gerarDieta({ ...dados, ...editableFields });
       const textoPlano =
         typeof diet === "string"
           ? diet
@@ -65,11 +91,7 @@ export default function ResultPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fffdfa] via-gray-50 to-gray-100 font-sans text-gray-800 py-8 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
         <Disclaimer />
       </motion.div>
 
@@ -83,20 +105,23 @@ export default function ResultPage() {
           Resultado Final
         </h2>
 
-        {/* 🔹 Informações Básicas */}
+        {/* 🔹 Dados principais */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {[
-            { label: "Altura", value: `${initialState.height} cm` },
-            { label: "Peso", value: `${initialState.weight} kg` },
-            { label: "Idade", value: `${initialState.age} anos` },
-            { label: "TMB", value: `${Number(initialState.tmbResult).toFixed(0)} kcal` },
+            { label: "Altura", value: `${dados.height || "-"} cm` },
+            { label: "Peso", value: `${dados.weight || "-"} kg` },
+            { label: "Idade", value: `${dados.age || "-"} anos` },
+            {
+              label: "TMB",
+              value: `${Number(dados.tmbResult || 0).toFixed(0)} kcal`,
+            },
             {
               label: "Gordura Corporal",
-              value: `${Number(initialState.percentualGordura).toFixed(2)}%`,
+              value: `${Number(dados.percentualGordura || 0).toFixed(2)}%`,
             },
-          ].map((item, index) => (
+          ].map((item, i) => (
             <div
-              key={index}
+              key={i}
               className="w-full p-4 bg-gray-50 rounded-2xl shadow-sm flex flex-col items-center justify-center"
             >
               <p className="text-gray-600 text-sm">{item.label}</p>
@@ -105,7 +130,7 @@ export default function ResultPage() {
           ))}
         </div>
 
-        {/* 🔸 Campos Editáveis */}
+        {/* 🔸 Campos editáveis */}
         <div className="space-y-6">
           {[
             { label: "Sexo", name: "gender", type: "select", options: ["Masculino", "Feminino"] },
@@ -117,13 +142,8 @@ export default function ResultPage() {
             { label: "Suplementos", name: "supplements", type: "text", placeholder: "Ex: whey, creatina..." },
             { label: "Alimentos da rotina", name: "foods", type: "text", placeholder: "Ex: arroz, frango, banana..." },
           ].map((item, i) => (
-            <div
-              key={i}
-              className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm"
-            >
-              <label className="block mb-2 font-semibold text-gray-700">
-                {item.label}:
-              </label>
+            <div key={i} className="w-full bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm">
+              <label className="block mb-2 font-semibold text-gray-700">{item.label}:</label>
               {item.type === "select" ? (
                 <select
                   name={item.name}
@@ -152,7 +172,7 @@ export default function ResultPage() {
           ))}
         </div>
 
-        {/* 🔹 Botão principal */}
+        {/* 🔹 Botão */}
         <button
           onClick={handleGenerateDiet}
           disabled={loading}
@@ -162,9 +182,7 @@ export default function ResultPage() {
         </button>
 
         {statusMessage && (
-          <p className="text-center text-gray-600 font-medium mt-4">
-            {statusMessage}
-          </p>
+          <p className="text-center text-gray-600 font-medium mt-4">{statusMessage}</p>
         )}
         {error && (
           <p className="text-center text-red-600 font-medium mt-2">{error}</p>
