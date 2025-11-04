@@ -1,42 +1,121 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { auth, db } from "../services/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { updateProfile } from "firebase/auth";
 
-// 🔹 Buscar dados do usuário no Firestore
+
+// ✅ Função para formatar nome a partir do email (retorna nome e sobrenome)
+function formatDisplayName(value) {
+  if (!value) return "";
+
+  const cleaned = value
+    .split("@")[0]            // pega antes do @
+    .replace(/[0-9]/g, "")    // remove números
+    .replace(/[._-]/g, " ")   // troca ., _, - por espaço
+    .trim();
+
+  const partes = cleaned.split(" ");
+
+  const nome = partes[0];
+  const sobrenome = partes[1] || "";    // pega só nome + sobrenome
+
+  return `${nome} ${sobrenome}`.trim().replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* 🔹 Buscar dados salvos no Firebase Auth + Firestore                        */
+/* -------------------------------------------------------------------------- */
 export const fetchUserData = createAsyncThunk("user/fetchUserData", async () => {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return {};
-  const ref = doc(db, "users", uid);
+  const authUser = auth.currentUser;
+  if (!authUser) return {};
+
+  const ref = doc(db, "users", authUser.uid);
   const snap = await getDoc(ref);
-  return snap.exists() ? snap.data() : {};
+
+  const firestoreData = snap.exists() ? snap.data() : {};
+
+  return {
+    uid: authUser.uid,
+    email: authUser.email,
+    lastLogin: authUser.metadata?.lastSignInTime || firestoreData.lastLogin,
+    displayName:
+      firestoreData.displayName ||
+      authUser.displayName ||
+      formatDisplayName(authUser.email),  // ✅ usa formato correto
+    ...firestoreData,
+  };
 });
 
-// 🔹 Atualizar dados no Firestore
+
+/* -------------------------------------------------------------------------- */
+/* 🔹 Atualizar no Firestore + Firebase Auth + Redux                          */
+/* -------------------------------------------------------------------------- */
 export const updateUserData = createAsyncThunk(
   "user/updateUserData",
   async (newData, { getState }) => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) throw new Error("Usuário não autenticado");
+    const user = auth.currentUser;
+    if (!user) throw new Error("Usuário não autenticado");
 
+    const uid = user.uid;
     const ref = doc(db, "users", uid);
-    const currentData = getState().user.userData || {};
-    const updated = { ...currentData, ...newData };
+    const current = getState().user.userData || {};
 
-    await setDoc(ref, updated, { merge: true });
-    return updated;
+    // ✅ Se o usuário editou o nome, usa o do form, senão gera a partir do email
+    const finalDisplayName = newData.displayName
+      ? formatDisplayName(newData.displayName)
+      : formatDisplayName(user.displayName || user.email);
+
+    const finalData = {
+      ...current,
+      ...newData,
+      email: user.email,
+      displayName: finalDisplayName,      // ✅ NOME SALVO CERTO
+      lastLogin: new Date().toISOString(),
+    };
+
+    // ✅ Salva no Firestore
+    await setDoc(ref, finalData, { merge: true });
+
+    // ✅ Atualiza no Firebase Auth
+    await updateProfile(user, { displayName: finalDisplayName });
+
+    return finalData; // ✅ volta atualizado para Redux
   }
 );
 
+
+/* -------------------------------------------------------------------------- */
+/* 🔹 Slice do usuário                                                        */
+/* -------------------------------------------------------------------------- */
 const userSlice = createSlice({
   name: "user",
-  initialState: { userData: {}, loading: false, error: null },
-  reducers: { clearUserData: (state) => { state.userData = {}; } },
+  initialState: {
+    userData: {},
+    loading: false,
+    error: null,
+  },
+  reducers: {
+    clearUserData: (state) => {
+      state.userData = {};
+    },
+  },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchUserData.pending, (s) => { s.loading = true; })
-      .addCase(fetchUserData.fulfilled, (s, a) => { s.loading = false; s.userData = a.payload; })
-      .addCase(fetchUserData.rejected, (s, a) => { s.loading = false; s.error = a.error.message; })
-      .addCase(updateUserData.fulfilled, (s, a) => { s.userData = a.payload; });
+      .addCase(fetchUserData.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchUserData.fulfilled, (state, action) => {
+        state.loading = false;
+        state.userData = action.payload;
+      })
+      .addCase(fetchUserData.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      })
+      .addCase(updateUserData.fulfilled, (state, action) => {
+        state.userData = action.payload;     // ✅Atualiza Redux
+      });
   },
 });
 

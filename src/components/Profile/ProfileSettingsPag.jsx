@@ -16,16 +16,14 @@ export default function ProfileSettingsPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 p-4 sm:p-6"
+      className="min-h-screen w-full flex justify-center items-start py-16 px-4 sm:px-6 bg-white"
     >
       {/* 📦 Container principal */}
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto 
-                   p-8 sm:p-10 border border-gray-100 transition-all duration-300 
-                   hover:shadow-[0_10px_35px_rgba(0,0,0,0.1)]"
+        className="bg-white rounded-3xl shadow-lg w-full max-w-4xl p-6 sm:p-10 border border-gray-100"
       >
         {/* 🔹 Cabeçalho */}
         <div className="flex items-center justify-between mb-8">
@@ -35,8 +33,9 @@ export default function ProfileSettingsPage() {
               Configurações da Conta
             </h2>
           </div>
+
           <button
-            onClick={() => navigate("/profile")}
+            onClick={() => navigate("/dashboard/profile")}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors"
             title="Voltar"
           >
@@ -46,14 +45,16 @@ export default function ProfileSettingsPage() {
 
         {/* 🔸 Resumo do usuário */}
         <div className="flex flex-col items-center mb-10 space-y-3">
-          <AvatarUpload />
+          <AvatarUpload userData={userData} />
           <h3 className="text-lg font-semibold text-gray-800">
-            {userData?.name || "Usuário"}
+            {userData?.displayName || "Usuário"}
           </h3>
-          <p className="text-gray-500 text-sm">{userData?.email || "E-mail não disponível"}</p>
+          <p className="text-gray-500 text-sm break-all">
+            {userData?.email || "E-mail não disponível"}
+          </p>
         </div>
 
-        {/* 🔹 Conteúdo organizado */}
+        {/* 🔹 Conteúdo */}
         <div className="space-y-10">
           <ChangePassword />
           <RecentActivity />

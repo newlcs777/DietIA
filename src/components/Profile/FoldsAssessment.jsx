@@ -24,9 +24,8 @@ export default function FoldsAssessment() {
   const [mensagem, setMensagem] = useState("");
   const [salvandoIdadeLive, setSalvandoIdadeLive] = useState(false);
 
-  // 🔹 Carrega dados do Redux
   useEffect(() => {
-    if (!userData || Object.keys(userData).length === 0) {
+    if (!userData) {
       dispatch(fetchUserData());
     } else {
       setAge(userData.age ?? 0);
@@ -40,7 +39,6 @@ export default function FoldsAssessment() {
     }
   }, [dispatch, userData]);
 
-  // 🔹 Recalcula soma e percentual de gordura
   useEffect(() => {
     const soma = subescapular + triciptal + axiliar + supra + peitoral + abdominal + coxa;
     setResultado(soma);
@@ -59,18 +57,16 @@ export default function FoldsAssessment() {
     }
   }, [subescapular, triciptal, axiliar, supra, peitoral, abdominal, coxa, age]);
 
-  // 🔹 Inputs das dobras
   const handleInput = (setter) => (e) => {
     const value = parseFloat(e.target.value);
     if (value > 100) return;
     setter(isNaN(value) ? 0 : value);
   };
 
-  // 💾 Salva avaliação física
   const salvarAvaliacao = async () => {
     try {
       const dadosAvaliacao = {
-        age: age || 0,
+        age,
         subescapular,
         triciptal,
         axiliar,
@@ -84,32 +80,27 @@ export default function FoldsAssessment() {
       };
 
       await dispatch(updateUserData(dadosAvaliacao)).unwrap();
-
       localStorage.setItem("dadosAvaliacao", JSON.stringify(dadosAvaliacao));
-      setMensagem("✅ Avaliação física salva e sincronizada!");
 
-      setTimeout(() => navigate("/dashboard/resultado"), 1000);
+      setMensagem("✅ Avaliação física salva com sucesso!");
+      setTimeout(() => navigate("/dashboard/resultado"), 800);
     } catch (err) {
       console.error("Erro ao salvar:", err);
       setMensagem("❌ Erro ao salvar os dados.");
     }
   };
 
-  // 🔹 Atualiza idade em tempo real
   const handleAgeChangeLive = async (e) => {
     const val = parseInt(e.target.value, 10);
     if (val > 100) return;
-    const idadeFinal = isNaN(val) ? 0 : val;
-    setAge(idadeFinal);
 
-    if (idadeFinal === userData?.age) return;
+    setAge(isNaN(val) ? 0 : val);
+    if (val === userData.age) return;
 
     try {
       setSalvandoIdadeLive(true);
-      await dispatch(updateUserData({ age: idadeFinal })).unwrap();
-      setMensagem("💾 Idade atualizada no perfil!");
-    } catch {
-      setMensagem("❌ Não foi possível salvar a idade agora.");
+      await dispatch(updateUserData({ age: val })).unwrap();
+      setMensagem("💾 Idade atualizada!");
     } finally {
       setSalvandoIdadeLive(false);
     }
@@ -127,108 +118,81 @@ export default function FoldsAssessment() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 px-4 sm:px-6 lg:px-8 font-sans text-gray-800"
+      transition={{ duration: 0.3 }}
+      className="w-full max-w-4xl mx-auto px-4 py-8 space-y-10 font-sans"
     >
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* 🔸 Resultado Atual */}
-        <div className="bg-yellow-50 border border-yellow-100 p-6 rounded-3xl shadow-inner text-center space-y-2">
-          <h2 className="text-xl sm:text-2xl font-bold text-[#F5BA45]">
-            Resultado Atual da Avaliação Física
-          </h2>
-          <p className="text-gray-700">
-            Soma das dobras:{" "}
-            <span className="font-bold text-gray-900">{resultado} mm</span>
-          </p>
-          <p className="text-gray-700">
-            Percentual de gordura estimado:{" "}
-            <span className="font-bold text-[#F5BA45]">
-              {percentualGordura.toFixed(2)}%
-            </span>
-          </p>
-        </div>
+      {/* Resultado Atual */}
+      <div className="bg-yellow-50 p-4 rounded-xl text-center border border-yellow-200">
+        <h2 className="text-xl font-bold text-[#F5BA45]">Resultado da Avaliação Física</h2>
+        <p>Soma das dobras: <strong>{resultado} mm</strong></p>
+        <p>Percentual estimado de gordura: <strong className="text-[#F5BA45]">{percentualGordura.toFixed(2)}%</strong></p>
+      </div>
 
-        {/* 🔹 Formulário de Avaliação */}
-        <section className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100 space-y-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-[#F5BA45] text-center">
-            Avaliação Física — 7 Dobras de Jackson & Pollock
-          </h2>
+      {/* Formulário */}
+      <section className="space-y-6">
+        <h2 className="text-xl font-bold text-[#F5BA45] text-center">
+          7 Dobras — Jackson & Pollock
+        </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Idade */}
-            <div className="sm:col-span-2">
-              <label className="block text-gray-700 font-medium mb-1">Idade:</label>
-              <input
-                type="number"
-                value={age}
-                onChange={handleAgeChangeLive}
-                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#F5BA45]"
-                placeholder="Digite sua idade (máx 100)"
-                min="10"
-                max="100"
-              />
-              {salvandoIdadeLive && (
-                <p className="text-xs text-gray-500 mt-1">Salvando idade…</p>
-              )}
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-            {/* Campos das dobras */}
-            {[
-              { label: "Subescapular", value: subescapular, setValue: setSubescapular },
-              { label: "Triciptal", value: triciptal, setValue: setTriciptal },
-              { label: "Axiliar", value: axiliar, setValue: setAxiliar },
-              { label: "Supra-ilíaca", value: supra, setValue: setSupra },
-              { label: "Peitoral", value: peitoral, setValue: setPeitoral },
-              { label: "Abdominal", value: abdominal, setValue: setAbdominal },
-              { label: "Coxa", value: coxa, setValue: setCoxa },
-            ].map(({ label, value, setValue }, index) => (
-              <div key={index}>
-                <label className="block text-gray-700 font-medium mb-1">{label} (mm):</label>
-                <input
-                  type="number"
-                  value={value}
-                  onChange={handleInput(setValue)}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#F5BA45]"
-                  placeholder={`Medida (${label}) — máx 100`}
-                  min="1"
-                  max="100"
-                />
-              </div>
-            ))}
+          <div className="sm:col-span-2">
+            <label className="font-medium text-gray-700">Idade:</label>
+            <input
+              type="number"
+              value={age}
+              onChange={handleAgeChangeLive}
+              className="w-full p-3 border rounded-lg focus:ring-[#F5BA45]"
+            />
+            {salvandoIdadeLive && <p className="text-xs text-gray-500">Salvando...</p>}
           </div>
 
-          {/* Mensagem */}
-          {mensagem && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className={`text-center font-medium ${
-                mensagem.includes("✅")
-                  ? "text-green-600"
-                  : mensagem.includes("❌")
-                  ? "text-red-600"
-                  : "text-gray-600"
-              }`}
-            >
-              {mensagem}
-            </motion.p>
-          )}
-
-          {/* Botão principal */}
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={salvarAvaliacao}
-            className="w-full mt-4 bg-[#F5BA45] hover:bg-[#e4a834] text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg"
-          >
-            Salvar Avaliação e Ver Resultado
-          </motion.button>
-        </section>
-
-        {/* 🔹 Informações adicionais */}
-        <div className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100">
-          <PhysicalAssessmentInfo />
+          {[
+            { label: "Subescapular", value: subescapular, setValue: setSubescapular },
+            { label: "Triciptal", value: triciptal, setValue: setTriciptal },
+            { label: "Axiliar", value: axiliar, setValue: setAxiliar },
+            { label: "Supra-ilíaca", value: supra, setValue: setSupra },
+            { label: "Peitoral", value: peitoral, setValue: setPeitoral },
+            { label: "Abdominal", value: abdominal, setValue: setAbdominal },
+            { label: "Coxa", value: coxa, setValue: setCoxa },
+          ].map(({ label, value, setValue }, i) => (
+            <div key={i}>
+              <label className="block text-gray-700 font-medium">{label} (mm):</label>
+              <input
+                type="number"
+                value={value}
+                onChange={handleInput(setValue)}
+                className="w-full p-3 border rounded-lg focus:ring-[#F5BA45]"
+                placeholder={`Medida (${label})`}
+              />
+            </div>
+          ))}
         </div>
-      </div>
+
+        {mensagem && (
+          <p
+            className={`text-center font-medium ${
+              mensagem.includes("✅")
+                ? "text-green-600"
+                : mensagem.includes("❌")
+                ? "text-red-600"
+                : "text-gray-600"
+            }`}
+          >
+            {mensagem}
+          </p>
+        )}
+
+        <button
+          onClick={salvarAvaliacao}
+          className="w-full bg-[#F5BA45] text-white py-3 rounded-xl font-bold hover:bg-[#e1a028]"
+        >
+          Salvar Avaliação e Ver Resultado
+        </button>
+      </section>
+
+      {/* Informações Extras */}
+      <PhysicalAssessmentInfo />
     </motion.div>
   );
 }

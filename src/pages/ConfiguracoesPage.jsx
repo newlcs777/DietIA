@@ -9,6 +9,19 @@ import EditProfileForm from "../components/Profile/EditProfileForm";
 import ChangePassword from "../components/Profile/ChangePassword";
 import RecentActivity from "../components/Profile/RecentActivity";
 
+// ✅ Função que converte email → "Nome Sobrenome"
+function formatName(name, email) {
+  const target = name?.includes("@") || !name ? email : name;
+
+  if (!target) return "Usuário";
+
+  const cleaned = target.split("@")[0].replace(/[0-9]/g, "");
+  const partes = cleaned.split(/[._-]/g);
+  const formatado = partes.slice(0, 2).join(" ");
+
+  return formatado.replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
 export default function ConfiguracoesPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -18,10 +31,13 @@ export default function ConfiguracoesPage() {
     dispatch(fetchUserData());
   }, [dispatch]);
 
+  const nomeFormatado = formatName(userData?.displayName, userData?.email);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center pt-16 pb-12 px-4 sm:px-6 lg:px-10 font-sans text-gray-800">
-      <div className="bg-white w-full max-w-5xl rounded-3xl shadow-xl border border-gray-100 p-6 sm:p-8 lg:p-10 transition-all duration-500 hover:shadow-2xl">
-        
+    <div className="min-h-screen flex flex-col items-center w-full font-sans text-gray-800 px-4 sm:px-6 lg:px-10 pt-20 pb-14">
+
+      <div className="w-full max-w-5xl">
+
         {/* 🔹 Cabeçalho */}
         <div className="flex items-center justify-between mb-10">
           <button
@@ -32,58 +48,60 @@ export default function ConfiguracoesPage() {
             <ArrowLeft className="w-6 h-6 text-gray-600 hover:text-[#F5BA45] transition-colors" />
           </button>
 
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 text-gray-900 text-center">
             <UserCog className="text-[#F5BA45] w-7 h-7" />
             Configurações da Conta
           </h2>
 
-          <div className="w-8" /> {/* Espaço para alinhar */}
+          <div className="w-8" /> {/* alinhamento visual */}
         </div>
 
-        {/* 🔸 Corpo */}
+        {/* 🔸 Loading */}
         {loading ? (
           <div className="text-center text-gray-500 py-10 animate-pulse">
             Carregando dados...
           </div>
         ) : (
           <>
-            {/* 🔸 Resumo do Usuário */}
+            {/* 🔹 Avatar + Nome */}
             <div className="flex flex-col items-center mb-10 text-center">
-              <AvatarUpload />
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mt-4">
-                {userData?.displayName || "Usuário"}
+              <AvatarUpload userData={userData} />
+
+              <h3 className="text-xl font-semibold text-gray-900 mt-4">
+                {nomeFormatado}
               </h3>
+
               <p className="text-gray-500 text-sm break-all">
                 {userData?.email || "—"}
               </p>
             </div>
 
-            {/* 🔸 Conteúdo em Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              {/* 🟡 Coluna 1: Edição + Senha */}
+            {/* 🔸 GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+              {/* 🟡 Coluna esquerda */}
               <div className="flex flex-col gap-10">
-                <EditProfileForm />
+                <EditProfileForm userData={userData} />
                 <ChangePassword />
               </div>
 
-              {/* 🟢 Coluna 2: Informações + Atividade */}
+              {/* 🟢 Coluna direita */}
               <div className="flex flex-col gap-10">
-                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 shadow-inner hover:shadow-md transition-all duration-300">
+
+                {/* ✅ Informações da Conta */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-all">
                   <h3 className="text-lg font-semibold text-gray-700 mb-4">
                     Informações da Conta
                   </h3>
+
                   <ul className="text-sm text-gray-700 space-y-2">
                     <li>
-                      <strong>Nome:</strong> {userData?.displayName || "—"}
+                      <strong>Nome:</strong> {nomeFormatado}
                     </li>
-                    <li>
-                      <strong>E-mail:</strong> {userData?.email || "—"}
-                    </li>
+                    <li><strong>E-mail:</strong> {userData?.email || "—"}</li>
                     <li>
                       <strong>Status:</strong>{" "}
-                      <span className="text-green-600 font-medium">
-                        Ativo
-                      </span>
+                      <span className="text-green-600 font-medium">Ativo</span>
                     </li>
                     <li>
                       <strong>Último acesso:</strong>{" "}
@@ -100,7 +118,8 @@ export default function ConfiguracoesPage() {
                   </ul>
                 </div>
 
-                <RecentActivity />
+                {/* Histórico */}
+                <RecentActivity userData={userData} />
               </div>
             </div>
           </>

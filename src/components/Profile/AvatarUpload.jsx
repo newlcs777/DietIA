@@ -1,37 +1,39 @@
 import { useState } from "react";
-import { auth, storage, db } from "../../services/firebase";
+import { useDispatch } from "react-redux";
+import { storage, db } from "../../services/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, updateDoc } from "firebase/firestore";
+import { updateUserData } from "../../store/userSlice";
 import { motion } from "framer-motion";
 
-export default function AvatarUpload() {
+export default function AvatarUpload({ userData }) {
+  const dispatch = useDispatch();
   const [uploading, setUploading] = useState(false);
-  const user = auth.currentUser;
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !userData?.uid) return;
 
     try {
       setUploading(true);
 
       // 🔹 Caminho no Storage
-      const storageRef = ref(storage, `avatars/${user.uid}.jpg`);
+      const storageRef = ref(storage, `avatars/${userData.uid}.jpg`);
       await uploadBytes(storageRef, file);
 
-      // 🔹 URL pública
+      // 🔹 URL pública da imagem
       const photoURL = await getDownloadURL(storageRef);
 
-      // 🔹 Atualiza Auth e Firestore
-      await updateDoc(doc(db, "users", user.uid), { photoURL });
-      await user.updateProfile({ photoURL });
+      // 🔹 Atualiza no Firestore
+      await updateDoc(doc(db, "users", userData.uid), { photoURL });
 
-      alert("✅ Foto atualizada com sucesso!");
-      window.location.reload();
+      // ✅ Atualiza no Redux (sem reload)
+      dispatch(updateUserData({ ...userData, photoURL }));
+
+      setUploading(false);
     } catch (error) {
       console.error("Erro ao enviar foto:", error);
-      alert("❌ Ocorreu um erro ao enviar a foto. Tente novamente.");
-    } finally {
+      alert("❌ Ocorreu um erro ao enviar a foto.");
       setUploading(false);
     }
   };
@@ -44,6 +46,7 @@ export default function AvatarUpload() {
       className="flex flex-col items-center space-y-3"
     >
       <label className="cursor-pointer flex flex-col items-center">
+        {/* Input hidden */}
         <input
           type="file"
           accept="image/*"
@@ -51,7 +54,7 @@ export default function AvatarUpload() {
           onChange={handleFileChange}
         />
 
-        {/* 🟡 Avatar com efeito de foco */}
+        {/* Avatar */}
         <motion.div
           whileHover={{ scale: 1.05 }}
           transition={{ type: "spring", stiffness: 200, damping: 12 }}
@@ -59,7 +62,7 @@ export default function AvatarUpload() {
         >
           <img
             src={
-              user?.photoURL ||
+              userData?.photoURL ||
               "https://www.pngall.com/wp-content/uploads/5/Profile-PNG-File.png"
             }
             alt="Avatar"
@@ -70,7 +73,7 @@ export default function AvatarUpload() {
           </span>
         </motion.div>
 
-        {/* 🟢 Botão de ação */}
+        {/* Botão */}
         <button
           disabled={uploading}
           className={`mt-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all shadow-sm ${
