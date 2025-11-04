@@ -1,22 +1,22 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { updatePassword } from "firebase/auth";
-import { auth, db } from "../../services/firebase";
+import { db } from "../../services/firebase";
 import { doc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import ReauthDialog from "../Shared/ReauthDialog";
 import { motion } from "framer-motion";
 
 export default function ChangePassword() {
+  const { userData } = useSelector((state) => state.user);
   const [form, setForm] = useState({ newPass: "", confirm: "" });
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [needReauth, setNeedReauth] = useState(false);
 
-  const user = auth.currentUser;
-
   // 🔹 Registra no Firestore que houve troca de senha
   const writeAudit = async () => {
-    if (!user) return;
-    const auditRef = collection(doc(db, "users", user.uid), "audit");
+    if (!userData?.uid) return;
+    const auditRef = collection(doc(db, "users", userData.uid), "audit");
     await addDoc(auditRef, {
       type: "password_change",
       at: serverTimestamp(),
@@ -39,7 +39,8 @@ export default function ChangePassword() {
 
     try {
       setLoading(true);
-      await updatePassword(user, form.newPass);
+      if (!userData?.authUser) throw new Error("Usuário não autenticado.");
+      await updatePassword(userData.authUser, form.newPass);
       await writeAudit();
       setMsg("✅ Senha alterada com sucesso!");
       setForm({ newPass: "", confirm: "" });
@@ -59,7 +60,8 @@ export default function ChangePassword() {
   const afterReauth = async () => {
     try {
       setLoading(true);
-      await updatePassword(user, form.newPass);
+      if (!userData?.authUser) throw new Error("Usuário não autenticado.");
+      await updatePassword(userData.authUser, form.newPass);
       await writeAudit();
       setMsg("✅ Senha alterada com sucesso!");
       setForm({ newPass: "", confirm: "" });
@@ -75,7 +77,8 @@ export default function ChangePassword() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="bg-white/95 backdrop-blur-md border border-gray-100 rounded-3xl shadow-sm p-6 sm:p-8 transition-all hover:shadow-md"
+      className="bg-white/95 backdrop-blur-md border border-gray-100 rounded-3xl shadow-sm 
+                 p-6 sm:p-8 transition-all hover:shadow-md max-w-3xl mx-auto"
     >
       {/* 🔹 Título */}
       <h2 className="text-xl font-bold text-gray-800 mb-5 flex items-center gap-2">
@@ -97,7 +100,8 @@ export default function ChangePassword() {
               setForm((f) => ({ ...f, newPass: e.target.value }))
             }
             required
-            className="p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5BA45] transition"
+            className="p-3 border border-gray-300 rounded-xl focus:outline-none 
+                       focus:ring-2 focus:ring-[#F5BA45] transition"
           />
         </div>
 
@@ -113,7 +117,8 @@ export default function ChangePassword() {
               setForm((f) => ({ ...f, confirm: e.target.value }))
             }
             required
-            className="p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5BA45] transition"
+            className="p-3 border border-gray-300 rounded-xl focus:outline-none 
+                       focus:ring-2 focus:ring-[#F5BA45] transition"
           />
         </div>
 

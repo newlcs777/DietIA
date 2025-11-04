@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
-import { db, auth } from "../../services/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchUserData, updateUserData } from "../../store/userSlice";
 import { motion } from "framer-motion";
 
 export default function EditProfileForm({ onCancel }) {
+  const dispatch = useDispatch();
+  const { userData, loading: loadingUser, error } = useSelector((state) => state.user);
+
   const [formData, setFormData] = useState({
     age: "",
     weight: "",
@@ -13,45 +16,36 @@ export default function EditProfileForm({ onCancel }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // 🔹 Carregar dados do Firestore
+  // 🔹 Carregar dados do usuário via Redux
   useEffect(() => {
-    const loadData = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setFormData({
-            age: data.age || "",
-            weight: data.weight || "",
-            goal: data.goal || "",
-            height: data.height || "",
-          });
-        }
-      }
-    };
-    loadData();
-  }, []);
+    if (!userData || Object.keys(userData).length === 0) {
+      dispatch(fetchUserData());
+    } else {
+      setFormData({
+        age: userData.age || "",
+        weight: userData.weight || "",
+        goal: userData.goal || "",
+        height: userData.height || "",
+      });
+    }
+  }, [dispatch, userData]);
 
   // 🔸 Atualizar valores
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // 💾 Salvar dados
+  // 💾 Salvar dados com Redux
   const handleSave = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
 
     try {
-      const user = auth.currentUser;
-      const docRef = doc(db, "users", user.uid);
-      await setDoc(docRef, formData, { merge: true });
+      await dispatch(updateUserData(formData)).unwrap();
       setMessage("✅ Dados salvos com sucesso!");
     } catch (err) {
-      console.error(err);
-      setMessage("❌ Erro ao salvar os dados.");
+      console.error("Erro ao salvar:", err);
+      setMessage("❌ Erro ao salvar os dados. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -70,6 +64,19 @@ export default function EditProfileForm({ onCancel }) {
       <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center flex items-center justify-center gap-2">
         🧍 Editar Dados Físicos
       </h3>
+
+      {/* 🔸 Estado de carregamento global */}
+      {loadingUser && (
+        <p className="text-center text-gray-600 mb-4">
+          Carregando informações do usuário...
+        </p>
+      )}
+
+      {error && (
+        <p className="text-center text-red-600 mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+          Erro ao carregar: {error}
+        </p>
+      )}
 
       {/* 🔸 Formulário */}
       <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">

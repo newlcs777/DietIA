@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { db, auth } from "../../services/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 import PhysicalAssessmentInfo from "./PhysicalAssessmentInfo";
-import { useUserData } from "../../contexts/UserDataContext";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchUserData, updateUserData } from "../../store/userSlice";
 import { useNavigate } from "react-router-dom";
 
 export default function FoldsAssessment() {
   const navigate = useNavigate();
-  const { userData, loadingUserData, updateUserData } = useUserData();
+  const dispatch = useDispatch();
+  const { userData, loading } = useSelector((state) => state.user);
 
   const [age, setAge] = useState(0);
   const [subescapular, setSubescapular] = useState(0);
@@ -21,46 +21,24 @@ export default function FoldsAssessment() {
 
   const [resultado, setResultado] = useState(0);
   const [percentualGordura, setPercentualGordura] = useState(0);
-
-  const [loadingPage, setLoadingPage] = useState(true);
   const [mensagem, setMensagem] = useState("");
   const [salvandoIdadeLive, setSalvandoIdadeLive] = useState(false);
 
-  // 🔹 Carrega dados iniciais
+  // 🔹 Carrega dados do Redux
   useEffect(() => {
-    const carregar = async () => {
-      const user = auth.currentUser;
-      if (!user) {
-        setLoadingPage(false);
-        return;
-      }
-
-      try {
-        const ref = doc(db, "physicalAssessments", user.uid);
-        const snap = await getDoc(ref);
-
-        const idadeInicial = userData?.age ?? (snap.exists() ? snap.data().age : 0);
-        setAge(idadeInicial || 0);
-
-        if (snap.exists()) {
-          const dados = snap.data();
-          setSubescapular(dados.subescapular || 0);
-          setTriciptal(dados.triciptal || 0);
-          setAxiliar(dados.axiliar || 0);
-          setSupra(dados.supra || 0);
-          setPeitoral(dados.peitoral || 0);
-          setAbdominal(dados.abdominal || 0);
-          setCoxa(dados.coxa || 0);
-        }
-      } catch (err) {
-        console.error("Erro ao carregar avaliação física:", err);
-      } finally {
-        setLoadingPage(false);
-      }
-    };
-
-    if (!loadingUserData) carregar();
-  }, [loadingUserData, userData]);
+    if (!userData || Object.keys(userData).length === 0) {
+      dispatch(fetchUserData());
+    } else {
+      setAge(userData.age ?? 0);
+      setSubescapular(userData.subescapular ?? 0);
+      setTriciptal(userData.triciptal ?? 0);
+      setAxiliar(userData.axiliar ?? 0);
+      setSupra(userData.supra ?? 0);
+      setPeitoral(userData.peitoral ?? 0);
+      setAbdominal(userData.abdominal ?? 0);
+      setCoxa(userData.coxa ?? 0);
+    }
+  }, [dispatch, userData]);
 
   // 🔹 Recalcula soma e percentual de gordura
   useEffect(() => {
@@ -88,14 +66,8 @@ export default function FoldsAssessment() {
     setter(isNaN(value) ? 0 : value);
   };
 
-  // 🔹 Salva avaliação física e redireciona
+  // 💾 Salva avaliação física
   const salvarAvaliacao = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Usuário não autenticado.");
-      return;
-    }
-
     try {
       const dadosAvaliacao = {
         age: age || 0,
@@ -111,27 +83,14 @@ export default function FoldsAssessment() {
         updatedAt: new Date().toISOString(),
       };
 
-      // salva no Firestore
-      await setDoc(doc(db, "physicalAssessments", user.uid), dadosAvaliacao, { merge: true });
+      await dispatch(updateUserData(dadosAvaliacao)).unwrap();
 
-      // atualiza contexto global
-      await updateUserData({
-        age: Number(age) || 0,
-        percentualGordura: percentualGordura ? Number(percentualGordura.toFixed(2)) : 0,
-        resultadoDobras: resultado || 0,
-      });
-
-      // salva também localmente (para o ResultPage exibir de imediato)
       localStorage.setItem("dadosAvaliacao", JSON.stringify(dadosAvaliacao));
-
       setMensagem("✅ Avaliação física salva e sincronizada!");
 
-      // redireciona corretamente dentro do dashboard
-      setTimeout(() => {
-        navigate("/dashboard/resultado");
-      }, 1000);
+      setTimeout(() => navigate("/dashboard/resultado"), 1000);
     } catch (err) {
-      console.error("Erro ao salvar avaliação física:", err);
+      console.error("Erro ao salvar:", err);
       setMensagem("❌ Erro ao salvar os dados.");
     }
   };
@@ -140,7 +99,6 @@ export default function FoldsAssessment() {
   const handleAgeChangeLive = async (e) => {
     const val = parseInt(e.target.value, 10);
     if (val > 100) return;
-
     const idadeFinal = isNaN(val) ? 0 : val;
     setAge(idadeFinal);
 
@@ -148,18 +106,16 @@ export default function FoldsAssessment() {
 
     try {
       setSalvandoIdadeLive(true);
-      await updateUserData({ age: idadeFinal });
+      await dispatch(updateUserData({ age: idadeFinal })).unwrap();
       setMensagem("💾 Idade atualizada no perfil!");
-    } catch (err) {
-      console.error("Erro ao salvar idade:", err);
+    } catch {
       setMensagem("❌ Não foi possível salvar a idade agora.");
     } finally {
       setSalvandoIdadeLive(false);
     }
   };
 
-  // 🔹 Tela de carregamento
-  if (loadingUserData || loadingPage) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-700 text-lg">
         Carregando avaliação física...
@@ -167,7 +123,6 @@ export default function FoldsAssessment() {
     );
   }
 
-  // 🔹 Interface principal
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -176,7 +131,7 @@ export default function FoldsAssessment() {
       className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 px-4 sm:px-6 lg:px-8 font-sans text-gray-800"
     >
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* Resultado Atual */}
+        {/* 🔸 Resultado Atual */}
         <div className="bg-yellow-50 border border-yellow-100 p-6 rounded-3xl shadow-inner text-center space-y-2">
           <h2 className="text-xl sm:text-2xl font-bold text-[#F5BA45]">
             Resultado Atual da Avaliação Física
@@ -193,7 +148,7 @@ export default function FoldsAssessment() {
           </p>
         </div>
 
-        {/* Formulário */}
+        {/* 🔹 Formulário de Avaliação */}
         <section className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100 space-y-6">
           <h2 className="text-xl sm:text-2xl font-bold text-[#F5BA45] text-center">
             Avaliação Física — 7 Dobras de Jackson & Pollock
@@ -213,11 +168,11 @@ export default function FoldsAssessment() {
                 max="100"
               />
               {salvandoIdadeLive && (
-                <p className="text-xs text-gray-500 mt-1">Salvando idade...</p>
+                <p className="text-xs text-gray-500 mt-1">Salvando idade…</p>
               )}
             </div>
 
-            {/* Entradas das dobras */}
+            {/* Campos das dobras */}
             {[
               { label: "Subescapular", value: subescapular, setValue: setSubescapular },
               { label: "Triciptal", value: triciptal, setValue: setTriciptal },
@@ -242,6 +197,7 @@ export default function FoldsAssessment() {
             ))}
           </div>
 
+          {/* Mensagem */}
           {mensagem && (
             <motion.p
               initial={{ opacity: 0 }}
@@ -268,7 +224,7 @@ export default function FoldsAssessment() {
           </motion.button>
         </section>
 
-        {/* Informações educativas */}
+        {/* 🔹 Informações adicionais */}
         <div className="bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-lg border border-gray-100">
           <PhysicalAssessmentInfo />
         </div>

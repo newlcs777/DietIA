@@ -1,22 +1,35 @@
 import React from "react";
 import { FaCheckCircle } from "react-icons/fa";
 import { Brain, Calculator, Activity, Info } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function TmbInfo() {
   return (
-    <div className="max-w-4xl mx-auto space-y-10 font-sans text-gray-800">
-      <header className="text-center space-y-2">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="max-w-4xl mx-auto space-y-10 font-sans text-gray-800"
+    >
+      {/* 🔹 Cabeçalho */}
+      <header className="text-center space-y-3">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-          💡 Entenda sua <span className="text-[#F5BA45]">TMB</span>
+          💡 Entenda sua{" "}
+          <span className="text-[#F5BA45] drop-shadow-sm">TMB</span>
         </h1>
         <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-          A <strong>Taxa Metabólica Basal (TMB)</strong> é a base de um plano
-          inteligente. Saber sua TMB mostra quantas calorias seu corpo precisa
-          apenas para manter as funções vitais.
+          A <strong>Taxa Metabólica Basal (TMB)</strong> é o ponto de partida de
+          qualquer plano inteligente. Ela indica quantas calorias seu corpo
+          gasta apenas para manter as funções vitais — mesmo em repouso.
         </p>
       </header>
 
-      <section className="w-full bg-white p-6 rounded-2xl shadow-lg space-y-4 border border-gray-100">
+      {/* 🔸 Seção: Importância */}
+      <motion.section
+        whileHover={{ scale: 1.01 }}
+        className="w-full bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-sm 
+                   border border-gray-100 hover:shadow-md transition-all space-y-4"
+      >
         <div className="flex items-center gap-2">
           <Info className="w-6 h-6 text-[#F5BA45]" />
           <h2 className="text-2xl font-semibold text-gray-900">
@@ -24,46 +37,62 @@ export default function TmbInfo() {
           </h2>
         </div>
         <p className="text-gray-700">
-          Saber sua TMB ajuda a ajustar a dieta e o treino para seus objetivos:
+          Saber sua TMB ajuda a ajustar sua dieta e treino de acordo com seu
+          objetivo:
         </p>
         <ul className="space-y-2 text-gray-700">
-          {["Manter o peso", "Ganhar massa muscular", "Perder gordura corporal"].map(
-            (goal, i) => (
-              <li key={i} className="flex items-center space-x-2">
-                <FaCheckCircle className="text-[#F5BA45]" />
-                <span>{goal}</span>
-              </li>
-            )
-          )}
+          {[
+            "Manter o peso atual",
+            "Ganhar massa muscular (hipertrofia)",
+            "Reduzir gordura corporal (emagrecimento)",
+          ].map((goal, i) => (
+            <li key={i} className="flex items-center space-x-2">
+              <FaCheckCircle className="text-[#F5BA45]" />
+              <span>{goal}</span>
+            </li>
+          ))}
         </ul>
-      </section>
+      </motion.section>
 
-      <section className="w-full bg-white p-6 rounded-2xl shadow-lg space-y-4 border border-gray-100">
+      {/* 🔸 Seção: Cálculo */}
+      <motion.section
+        whileHover={{ scale: 1.01 }}
+        className="w-full bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-sm 
+                   border border-gray-100 hover:shadow-md transition-all space-y-4"
+      >
         <div className="flex items-center gap-2">
           <Calculator className="w-6 h-6 text-[#F5BA45]" />
           <h2 className="text-2xl font-semibold text-gray-900">
-            Como é calculada a TMB
+            Como a TMB é calculada
           </h2>
         </div>
-        <p>
-          A TMB é calculada considerando peso, altura, idade e sexo. Ela serve
-          como base para definir o quanto seu corpo gasta e precisa por dia.
+        <p className="text-gray-700 leading-relaxed">
+          A fórmula leva em conta <strong>peso</strong>, <strong>altura</strong>,
+          <strong> idade</strong> e <strong>sexo</strong>. Esses dados permitem
+          estimar o gasto energético diário, servindo como base para ajustar
+          calorias e macronutrientes de forma personalizada.
         </p>
-      </section>
+      </motion.section>
 
-      <section className="w-full bg-white p-6 rounded-2xl shadow-lg space-y-4 border border-gray-100">
+      {/* 🔸 Seção: Uso prático */}
+      <motion.section
+        whileHover={{ scale: 1.01 }}
+        className="w-full bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-sm 
+                   border border-gray-100 hover:shadow-md transition-all space-y-4"
+      >
         <div className="flex items-center gap-2">
           <Brain className="w-6 h-6 text-[#F5BA45]" />
           <h2 className="text-2xl font-semibold text-gray-900">
             Como usar a calculadora
           </h2>
         </div>
-        <p>
+        <p className="text-gray-700 leading-relaxed">
           Insira seus dados e clique em{" "}
-          <strong>Calcular e Salvar TMB</strong>. O resultado será gravado no
-          seu perfil automaticamente e usado nas próximas etapas de avaliação.
+          <strong>“Calcular e Salvar TMB”</strong>. O resultado será gravado no
+          seu perfil e usado nas próximas etapas — como o cálculo de dieta
+          inteligente e recomendações automáticas de treino.
         </p>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }

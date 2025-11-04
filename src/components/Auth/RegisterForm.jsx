@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { auth, db } from "../../services/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
 
 export default function RegisterForm() {
@@ -21,16 +21,29 @@ export default function RegisterForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Atualiza nome padrão
+      await updateProfile(user, { displayName: "Usuário" });
+
+      // Cria documento no Firestore
       await setDoc(doc(db, "users", user.uid), {
         email,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
+        displayName: "Usuário",
       });
 
       setSuccess("✅ Conta criada com sucesso! Faça login para continuar.");
       setEmail("");
       setPassword("");
     } catch (err) {
-      setError("❌ Erro ao registrar: " + err.message);
+      if (err.code === "auth/email-already-in-use") {
+        setError("❌ Este e-mail já está em uso.");
+      } else if (err.code === "auth/invalid-email") {
+        setError("❌ O formato do e-mail é inválido.");
+      } else if (err.code === "auth/weak-password") {
+        setError("❌ A senha deve ter pelo menos 6 caracteres.");
+      } else {
+        setError("❌ Erro ao registrar. Tente novamente mais tarde.");
+      }
     } finally {
       setLoading(false);
     }
@@ -43,27 +56,27 @@ export default function RegisterForm() {
     >
       {/* 🔹 Cabeçalho */}
       <header className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
           Crie sua conta
         </h2>
-        <p className="text-sm text-gray-600">
+        <p className="text-gray-600 text-sm sm:text-base">
           Leve seu treino e sua alimentação a outro nível 💪
         </p>
       </header>
 
-      {/* 🔻 Mensagens de erro e sucesso */}
+      {/* 🔻 Mensagens */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 text-center shadow-sm">
+        <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 text-center shadow-sm font-medium">
           {error}
         </div>
       )}
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl p-3 text-center shadow-sm">
+        <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl p-3 text-center shadow-sm font-medium">
           {success}
         </div>
       )}
 
-      {/* 🔸 Campos de formulário */}
+      {/* 🔸 Campos */}
       <div className="space-y-4">
         <div>
           <label className="block text-gray-700 font-medium mb-1 text-sm">
@@ -85,7 +98,7 @@ export default function RegisterForm() {
           </label>
           <input
             type="password"
-            placeholder="Crie uma senha segura"
+            placeholder="Crie uma senha segura (mínimo 6 caracteres)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -98,7 +111,7 @@ export default function RegisterForm() {
       <button
         type="submit"
         disabled={loading}
-        className={`w-full py-3 rounded-xl text-gray-900 font-semibold transition-all ${
+        className={`w-full py-3 rounded-xl text-white font-semibold transition-all duration-300 ${
           loading
             ? "bg-[#F5BA45]/70 cursor-not-allowed"
             : "bg-[#F5BA45] hover:bg-[#e4a834] shadow-md hover:shadow-lg"

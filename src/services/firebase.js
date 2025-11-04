@@ -7,6 +7,8 @@ import {
   FacebookAuthProvider,
   GithubAuthProvider,
   OAuthProvider,
+  signOut,
+  onAuthStateChanged,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -20,19 +22,20 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Inicializa o app
+// 🔹 Inicializa o app
 const app = initializeApp(firebaseConfig);
 
-// Exporta autenticação e banco de dados
+// 🔹 Serviços principais
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 // 🔹 Providers de login social
 export const googleProvider = new GoogleAuthProvider();
 export const facebookProvider = new FacebookAuthProvider();
 export const githubProvider = new GithubAuthProvider();
 export const appleProvider = new OAuthProvider("apple.com");
-
-// LinkedIn (não nativo) — placeholder para evitar erro de importação
 export const linkedinProvider = new OAuthProvider("linkedin.com");
-export const storage = getStorage(app);
+
+// 🔹 Funções utilitárias para autenticação
+export { signOut, onAuthStateChanged };

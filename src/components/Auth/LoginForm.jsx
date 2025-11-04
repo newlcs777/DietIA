@@ -23,34 +23,43 @@ export default function LoginForm() {
     if (user) navigate("/dashboard/profile");
   }, [user, navigate]);
 
-  // 🔹 Login com email/senha
+  // 🔹 Login com e-mail e senha
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
       navigate("/dashboard/profile");
-    } catch {
-      setError("Email ou senha incorretos. Tente novamente.");
+    } catch (err) {
+      if (err.code === "auth/invalid-email") {
+        setError("Formato de e-mail inválido.");
+      } else if (err.code === "auth/user-not-found") {
+        setError("Usuário não encontrado.");
+      } else if (err.code === "auth/wrong-password") {
+        setError("Senha incorreta. Tente novamente.");
+      } else {
+        setError("Falha ao entrar. Verifique seus dados.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 Login com Google/Apple
+  // 🔹 Login com provedores (Google / Apple)
   const handleProviderLogin = async (provider, label) => {
     setError("");
     try {
       await signInWithPopup(auth, provider);
       navigate("/dashboard/profile");
     } catch {
-      setError(`Erro ao entrar com ${label}`);
+      setError(`Erro ao entrar com ${label}.`);
     }
   };
 
   return (
-    <div className="w-full max-w-sm bg-white/95 backdrop-blur-md p-8 sm:p-10 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.08)] space-y-8 transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)]">
+    <div className="w-full max-w-sm bg-white/95 backdrop-blur-md p-8 sm:p-10 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.08)] space-y-8 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)]">
       {/* 🔹 Cabeçalho */}
       <header className="text-center space-y-2">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-snug">
@@ -64,7 +73,7 @@ export default function LoginForm() {
 
       {/* 🔻 Mensagem de erro */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 text-center shadow-sm">
+        <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl p-3 text-center shadow-sm font-medium">
           {error}
         </div>
       )}
@@ -102,7 +111,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full py-3 rounded-xl text-gray-900 font-semibold transition-all ${
+          className={`w-full py-3 rounded-xl text-white font-semibold transition-all duration-300 ${
             loading
               ? "bg-[#F5BA45]/70 cursor-not-allowed"
               : "bg-[#F5BA45] hover:bg-[#e4a834] shadow-md hover:shadow-lg"
@@ -120,6 +129,7 @@ export default function LoginForm() {
 
         <div className="flex flex-col gap-3">
           <button
+            type="button"
             onClick={() => handleProviderLogin(googleProvider, "Google")}
             className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 py-3 rounded-xl font-medium shadow-sm hover:shadow-md hover:bg-gray-50 transition-all"
           >
@@ -128,6 +138,7 @@ export default function LoginForm() {
           </button>
 
           <button
+            type="button"
             onClick={() => handleProviderLogin(appleProvider, "Apple")}
             className="w-full flex items-center justify-center gap-3 bg-black text-white py-3 rounded-xl font-medium shadow-sm hover:bg-gray-900 transition-all"
           >

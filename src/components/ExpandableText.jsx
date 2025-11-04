@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export default function ExpandableText({ children, collapsedHeight = 300 }) {
   const [expanded, setExpanded] = useState(false);
   const [height, setHeight] = useState(collapsedHeight);
   const contentRef = useRef(null);
 
-  // 🔹 Calcula a altura dinamicamente
+  // 🔹 Atualiza altura dinamicamente com base no estado
   useEffect(() => {
     if (expanded) {
       setHeight(contentRef.current.scrollHeight);
@@ -18,7 +18,7 @@ export default function ExpandableText({ children, collapsedHeight = 300 }) {
 
   return (
     <div className="relative transition-all duration-700 ease-in-out">
-      {/* Conteúdo expansível com animação */}
+      {/* 🔸 Conteúdo expansível com animação suave */}
       <motion.div
         ref={contentRef}
         animate={{ maxHeight: height }}
@@ -28,17 +28,19 @@ export default function ExpandableText({ children, collapsedHeight = 300 }) {
         {children}
       </motion.div>
 
-      {/* Gradiente no final (efeito elegante de fade-out) */}
+      {/* 🔹 Efeito de fade elegante no final do texto */}
       {!expanded && (
-        <div className="absolute bottom-10 left-0 w-full h-20 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none rounded-b-2xl"></div>
+        <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none rounded-b-2xl" />
       )}
 
-      {/* Botão Ler mais / Mostrar menos */}
+      {/* 🔘 Botão de alternância */}
       <div className="flex justify-center mt-6">
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-gray-800 bg-[#F5BA45]/20 hover:bg-[#F5BA45]/30 transition-all duration-300 shadow-sm"
+          onClick={() => setExpanded((prev) => !prev)}
+          className="flex items-center gap-2 px-5 py-2 rounded-full text-sm sm:text-base font-semibold 
+                     text-gray-800 bg-[#F5BA45]/20 hover:bg-[#F5BA45]/30 
+                     transition-all duration-300 shadow-sm backdrop-blur-sm"
         >
           {expanded ? (
             <>
