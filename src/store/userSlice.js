@@ -66,13 +66,19 @@ export const updateUserData = createAsyncThunk(
       ? formatDisplayName(newData.displayName)
       : formatDisplayName(user.displayName || user.email);
 
-    const finalData = {
-      ...current,
-      ...newData,
-      email: user.email,
-      displayName: finalDisplayName,      // ✅ NOME SALVO CERTO
-      lastLogin: new Date().toISOString(),
-    };
+   // ✅ Remove campos vazios/nulos para evitar apagar dados no Firestore
+const cleanedData = Object.fromEntries(
+  Object.entries(newData).filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+);
+
+const finalData = {
+  ...current,
+  ...cleanedData,        // ✅ agora só valores válidos
+  email: user.email,
+  displayName: finalDisplayName,
+  lastLogin: new Date().toISOString(),
+};
+
 
     // ✅ Salva no Firestore
     await setDoc(ref, finalData, { merge: true });

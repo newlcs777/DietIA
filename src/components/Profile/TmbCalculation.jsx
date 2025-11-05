@@ -37,6 +37,7 @@ export default function TmbCalculation() {
         goal: userData.goal ?? "Emagrecimento",
         meals: userData.meals ?? 6,
       });
+
       setTmbResult(userData.tmbResult ?? null);
       setMacros({
         protein: userData.protein ?? 0,
@@ -60,10 +61,11 @@ export default function TmbCalculation() {
       return;
     }
 
+    // ✅ Fórmula moderna Mifflin-St Jeor (mais precisa)
     let resultadoTmb =
       sex === "Masculino"
-        ? 66 + 13.7 * weight + 5 * height - 6.8 * age
-        : 655 + 9.6 * weight + 1.8 * height - 4.7 * age;
+        ? 10 * weight + 6.25 * height - 5 * age + 5
+        : 10 * weight + 6.25 * height - 5 * age - 161;
 
     if (goal === "Emagrecimento") resultadoTmb *= 0.85;
     if (goal === "Hipertrofia") resultadoTmb *= 1.15;
@@ -88,33 +90,80 @@ export default function TmbCalculation() {
     setTmbResult(Math.round(resultadoTmb));
     setMacros({ protein, carb, fat });
     setStatusMsg("✅ Dados calculados e salvos!");
+
+    // ✅ Navega corretamente para FoldsAssessment
+    navigate("/dashboard/avaliacao");
   };
 
   return (
     <motion.div className="space-y-10 w-full">
-      <form
-        onSubmit={handleCalcular}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-      >
-        <input type="number" name="height" placeholder="Altura (cm)" value={form.height} onChange={handleChange} className="border rounded-lg p-2 w-full" />
-        <input type="number" name="weight" placeholder="Peso (kg)" value={form.weight} onChange={handleChange} className="border rounded-lg p-2 w-full" />
-        <input type="number" name="age" placeholder="Idade" value={form.age} onChange={handleChange} className="border rounded-lg p-2 w-full" />
-        <select name="sex" value={form.sex} onChange={handleChange} className="border rounded-lg p-2 w-full">
-          <option value="">Sexo</option>
-          <option value="Masculino">Masculino</option>
-          <option value="Feminino">Feminino</option>
-        </select>
+      <form onSubmit={handleCalcular} className="flex flex-col gap-4 w-full">
 
-        <select name="goal" value={form.goal} onChange={handleChange} className="border rounded-lg p-2 w-full">
-          <option value="Emagrecimento">Emagrecimento</option>
-          <option value="Hipertrofia">Hipertrofia</option>
-          <option value="Manutenção">Manutenção</option>
-        </select>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Altura (cm)</label>
+          <input
+            type="number"
+            name="height"
+            placeholder="Ex: 180"
+            value={form.height}
+            onChange={handleChange}
+            className="border border-gray-300 rounded-md p-2 w-full text-sm focus:ring-[#F5BA45] focus:border-[#F5BA45]"
+          />
+        </div>
 
-        <button
-          type="submit"
-          className="col-span-2 bg-[#F5BA45] text-white font-semibold py-2 rounded-lg"
-        >
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Peso (kg)</label>
+          <input
+            type="number"
+            name="weight"
+            placeholder="Ex: 80"
+            value={form.weight}
+            onChange={handleChange}
+            className="border border-gray-300 rounded-md p-2 w-full text-sm focus:ring-[#F5BA45] focus:border-[#F5BA45]"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Idade</label>
+          <input
+            type="number"
+            name="age"
+            placeholder="Ex: 28"
+            value={form.age}
+            onChange={handleChange}
+            className="border border-gray-300 rounded-md p-2 w-full text-sm focus:ring-[#F5BA45] focus:border-[#F5BA45]"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Sexo</label>
+          <select
+            name="sex"
+            value={form.sex}
+            onChange={handleChange}
+            className="border border-gray-300 rounded-md p-2 w-full text-sm focus:ring-[#F5BA45] focus:border-[#F5BA45]"
+          >
+            <option value="">Selecione</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Feminino">Feminino</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Objetivo</label>
+          <select
+            name="goal"
+            value={form.goal}
+            onChange={handleChange}
+            className="border border-gray-300 rounded-md p-2 w-full text-sm focus:ring-[#F5BA45] focus:border-[#F5BA45]"
+          >
+            <option value="Emagrecimento">Emagrecimento</option>
+            <option value="Hipertrofia">Hipertrofia</option>
+            <option value="Manutenção">Manutenção</option>
+          </select>
+        </div>
+
+        <button type="submit" className="bg-[#F5BA45] text-white font-semibold py-2 rounded-lg">
           Calcular e Salvar TMB
         </button>
       </form>
